@@ -1,8 +1,4 @@
-
-
-# Labels according to: https://github.com/QueensGambit/CrazyAra/blob/master/DeepCrazyhouse/src/domain/crazyhouse/constants.py
-LABELS = [
-    "a1b1",
+LABELS = [    "a1b1",# Labels according to: https://github.com/QueensGambit/CrazyAra/blob/master/DeepCrazyhouse/src/domain/crazyhouse/constants.py
     "a1c1",
     "a1d1",
     "a1e1",

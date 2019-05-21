@@ -65,7 +65,7 @@ class BugHouseGame(Game):
         return [(state.board, pi)]
 
     def stringRepresentation(self, state):
-        return str(' '.join(state._boards_fen))
+        return str(' '.join(state._boards_fen) + ' ' +  ('w' if state.player else 'b'))
 
 def printBughouse(agent):
     builder = []

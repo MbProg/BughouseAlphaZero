@@ -5,8 +5,8 @@ import numpy as np
 class _BughouseBoardState:
     def __init__(self, board):
         self.board_state = chess._BoardState(board)
-        self.pockets = copy.deepcopy(board._bughouse_boards.boards[board.other_board_id].pockets)
-        self.pockets_self = copy.deepcopy(board.pockets)
+        self.pockets = board._bughouse_boards.boards[board.other_board_id].pockets.copy()
+        self.pockets_self = board.pockets.copy()
 
     def restore(self, board):
         self.board_state.restore(board)

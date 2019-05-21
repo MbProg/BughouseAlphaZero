@@ -112,6 +112,12 @@ class MCTS():
 
         a = best_act
         next_s, next_player = self.game.getNextState(canonicalBoard, 1, a)
+        # try:
+        #     print(canonicalBoard._boards_fen[0],'- player: ', str(canonicalBoard.player))
+        #     next_s, next_player = self.game.getNextState(canonicalBoard, 1, a)
+        # except:
+        #     next_s, next_player = self.game.getNextState(canonicalBoard, 1, a)
+
         next_s = self.game.getCanonicalForm(next_s, next_player)
 
         v = self.search(next_s)
