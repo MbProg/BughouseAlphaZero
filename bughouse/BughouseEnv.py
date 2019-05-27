@@ -4,7 +4,6 @@ import numpy as np
 from .BugHouseBoard import BughouseBoards
 import bughouse.constants as constants
 
-
 class BughouseState(object):
     def __init__(self, player, board, pockets, time_remaining, _pockets_left, _pockets_right, _boards_fen):
         self.player = player # Player that is allowed to move next
@@ -104,6 +103,22 @@ class BughouseEnv():
         :return:
         """
         self.boards.boards[board].push_uci(uci_move)
+        # color = self.boards.boards[board].turn
+        # if color == (team == board):
+        #     self.boards.boards[board].push_uci(uci_move)
+        # else:
+        #     warnings.warn("Warning")
+
+    def push_san(self, san_move: str, team, board):
+        """
+        Make a move for any player
+
+        :param uci_move:
+        :param team:
+        :param board:
+        :return:
+        """
+        self.boards.boards[board].push_san(san_move)
         # color = self.boards.boards[board].turn
         # if color == (team == board):
         #     self.boards.boards[board].push_uci(uci_move)
