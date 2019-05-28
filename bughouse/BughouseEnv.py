@@ -31,7 +31,7 @@ class BughouseEnv():
     BOARDS = [LEFT, RIGHT] = [BOARD_A, BOARD_B] = [0, 1]
     MAX_TIME = 600 # In Seconds ToDo get real time
 
-    def __init__(self, team, board):
+    def __init__(self, team=0, board=0):
         self.legal_moves = dict.fromkeys(constants.LABELS, 0)
         self.team = team
         self.board = board
@@ -72,6 +72,7 @@ class BughouseEnv():
         Check if the game has finished
         :return: Bool
         """
+
         return self.boards.is_game_over()
 
     def get_score(self):
@@ -109,21 +110,20 @@ class BughouseEnv():
         # else:
         #     warnings.warn("Warning")
 
-    def push_san(self, san_move: str, team, board):
+    def push_san(self, san_move: str, team, board, to_uci: bool = False):
         """
-        Make a move for any player
+        Make a move for any player, input is short algebraic notation (san)
 
-        :param uci_move:
+        :param san_move:
         :param team:
         :param board:
+        :param to_uci: return the converted san move as uci
         :return:
         """
-        self.boards.boards[board].push_san(san_move)
-        # color = self.boards.boards[board].turn
-        # if color == (team == board):
-        #     self.boards.boards[board].push_uci(uci_move)
-        # else:
-        #     warnings.warn("Warning")
+        move = self.parse_san(san_move)
+        self.boards.boards[board].push(move)
+        if to_uci:
+            return move.uci()
 
     def get_legal_moves_dict(self, side=None):
         """
@@ -150,4 +150,8 @@ class BughouseEnv():
         for lm in self.boards.generate_legal_moves(board):
             legal_moves[lm.uci()] = 1
         return legal_moves.values()
+    
+    def reset(self):
+        self.boards.reset_boards() #Reset Board
+        self.time_remaining = np.full((2, 2), self.MAX_TIME) #  Reset Time
 
