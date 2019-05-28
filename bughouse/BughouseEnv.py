@@ -120,7 +120,7 @@ class BughouseEnv():
         :param to_uci: return the converted san move as uci
         :return:
         """
-        move = self.parse_san(san_move)
+        move = self.boards.boards[board].parse_san(san_move)
         self.boards.boards[board].push(move)
         if to_uci:
             return move.uci()
