@@ -1,16 +1,22 @@
 import warnings
 import copy
 import numpy as np
-from .BugHouseBoard import BughouseBoards
+from bughouse.BugHouseBoard import BughouseBoards
 import bughouse.constants as constants
 
+
 class BughouseState(object):
-    def __init__(self, player, board, pockets, time_remaining, _pockets_left, _pockets_right, _boards_fen):
-        self.player = player # Player that is allowed to move next
-        self.board = board
-        self.pockets = pockets
-        self.time_remaining = time_remaining
+    def __init__(self, matrices, time, _pockets_left, _pockets_right, _boards_fen):
+        # old state
+        # self.player = player # Player that is allowed to move next
+        # self.board = board
+        # self.pockets = pockets
+        # self.time_remaining = time_remaining
         # variables for bord init
+        # State matrices
+        self.piece_mat, self.pocket_mat, self.player_mat, self.movecount_mat, self.promoted_mat,\
+        self.castling_mat = matrices
+        self.time_remaining = time
         self._pockets_left =_pockets_left
         self._pockets_right = _pockets_right
         self._boards_fen = _boards_fen
@@ -50,22 +56,16 @@ class BughouseEnv():
 
     def propapagete_board(self, action) -> BughouseState:
         self.push(action, self.team, self.board)  # Execute the action
-        player = self.boards.boards[self.board].turn
-        board_state = self.boards.to_numpy(flip=True)
-        pockets_np = self.boards.get_pockets_numpy()
         time = self.time_remaining
         _boards_fen = self.boards.board_fen()
         _pockets_left, _pockets_right = self.boards.get_pockets()
-        return BughouseState(player, board_state, pockets_np, time, _pockets_left, _pockets_right, _boards_fen)
+        return BughouseState(self.boards.to_numpy(flip=False), time, _pockets_left, _pockets_right, _boards_fen)
 
     def get_state(self):
-        player = self.boards.boards[self.board].turn
-        board_state = self.boards.to_numpy(flip=True)
-        pockets_np = self.boards.get_pockets_numpy()
         time = self.time_remaining
         _boards_fen = self.boards.board_fen()
         _pockets_left, _pockets_right = self.boards.get_pockets()
-        return BughouseState(player, board_state, pockets_np, time, _pockets_left, _pockets_right, _boards_fen)
+        return BughouseState(self.boards.to_numpy(flip=False), time, _pockets_left, _pockets_right, _boards_fen)
 
     def game_finished(self):
         """
@@ -150,7 +150,7 @@ class BughouseEnv():
         for lm in self.boards.generate_legal_moves(board):
             legal_moves[lm.uci()] = 1
         return legal_moves.values()
-    
+
     def reset(self):
         self.boards.reset_boards() #Reset Board
         self.time_remaining = np.full((2, 2), self.MAX_TIME) #  Reset Time
