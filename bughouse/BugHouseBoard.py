@@ -131,9 +131,9 @@ class _BughouseBoard(chess.variant.CrazyhouseBoard):
         # 8x8 is network input size
         ret_pockets = np.zeros((2, 5, 8, 8))
         for pt, count in self.pockets[chess.BLACK].pieces.items():
-            ret_pockets[chess.BLACK, pt - 1, :, :] = float(count) / normalization
+            ret_pockets[int(chess.BLACK), pt - 1, :, :] = float(count) / normalization
         for pt, count in self.pockets[chess.WHITE].pieces.items():
-            ret_pockets[chess.WHITE, pt - 1, :, :] = float(count) / normalization
+            ret_pockets[int(chess.WHITE), pt - 1, :, :] = float(count) / normalization
         return ret_pockets
 
     def to_numpy_simplified(self, flip: bool):
