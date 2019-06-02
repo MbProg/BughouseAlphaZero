@@ -125,7 +125,7 @@ class BughouseBoards:
     aliases = ["Bughouse", "Bug House", "BH"]
     uci_variant = "bughouse"
     xboard_variant = "bughouse"
-    starting_fen = ["rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR[] w KQkq - 0 1",
+    starting_fen = ["rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR[] w KQkq - 0 1", #8/3K4/8/5k2/8/8/8/8 w KQkq - 0 1
                     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR[] w KQkq - 0 1"]
 
     tbw_suffix = tbz_suffix = None
