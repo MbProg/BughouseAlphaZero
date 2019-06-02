@@ -21,7 +21,15 @@ class BugHouseGame(Game):
 
     def getActionSize(self):
         return len(constants.LABELS)
-    
+
+    def getActionString(self,action):
+        return constants.LABELS[action]
+
+    def getActionNumber(self,actionString):
+        for counter,elem in enumerate(constants.LABELS):
+            if elem == actionString:
+                return counter
+
     def getNextState(self,state,player,action):
         copyAgent = BughouseEnv(0,0)
         copyAgent.load_state(state)

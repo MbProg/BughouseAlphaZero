@@ -2,7 +2,9 @@ import numpy as np
 from pytorch_classification.utils import Bar, AverageMeter
 import time
 from Arena import Arena
-from MCTS import MCTS 
+from MCTS import MCTS
+from websocket import create_connection
+
 
 class BugHouseArena(Arena):
     """
@@ -29,6 +31,85 @@ class BugHouseArena(Arena):
         # self.player2 = lambda x: np.argmax(nmcts.getActionProb(x, temp=0))
         self.game = game
         self.display = display
+
+    def playAgainstServer(self):
+
+        ws = create_connection("ws://127.0.0.1/websocketclient")
+        print("Sending 'Hello, World'...")
+        ws.send("Hello, World")
+        print("Sent")
+        print("Receiving...")
+        dataList = []
+        state = self.game.getInitBoard()
+
+        sent = True
+        insertDataList = True
+        gameStart = False
+        action = ''
+        InitialMove = False
+        curPlayer = 1
+
+        while True:
+            result = ws.recv()
+            if gameStart:
+                action = result
+
+            dataList.append(result)
+
+            if result == "go":
+                gameStart = True
+
+
+            # dataList.append("datalist:"+result)
+
+            if result == 'protover 4':
+                ws.send("feature")
+                if result == 'accepted':
+                    print("Yeahh, wait for game")
+
+                    # print(dataList)
+
+            # if I have partner 1 or partner 2 as team member -> I am the beginner
+            if gameStart:
+                if ("partner 1" in dataList or "partner2" in dataList):
+                    InitialMove = True
+
+                if InitialMove:
+                    action  # run action
+                    InitialMove = False
+                    state, curPlayer,action = self.performActionAgainsNetworkPlayer(state,curPlayer)
+                    dataList = []
+                    ws.send(action)
+                    action = ''
+                    continue
+                if action != '':
+                    state, curPlayer,action = self.performActionAgainsNetworkPlayer(state,curPlayer,action)
+                    ws.send(action)
+                    action = ''
+
+                else:
+                    state, curPlayer,action = self.performActionAgainsNetworkPlayer(state,curPlayer)
+                    ws.send(action)
+                    action = ''
+
+                dataList = []
+        ws.close()
+
+    def performActionAgainsNetworkPlayer(self, state,curPlayer, actionString=''):
+        if actionString=='':
+            actionNumber = np.argmax(self.mcts.getActionProb(state, temp=0))
+            # action = players[curPlayer+1](self.game.getCanonicalForm(state, curPlayer))
+            actionString = self.game.getActionString(actionNumber)
+        else:
+            actionNumber = self.game.getActionNumber(actionString)
+        valids = self.game.getValidMoves(self.game.getCanonicalForm(state, curPlayer), 1)
+
+        if valids[actionNumber] == 0:
+            print(actionNumber)
+            assert valids[actionNumber] > 0
+        state, curPlayer = self.game.getNextState(state, curPlayer, actionNumber)
+
+        return state, curPlayer,actionString
 
     def playGame(self, verbose=False):
         """
