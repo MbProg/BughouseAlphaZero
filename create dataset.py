@@ -20,7 +20,7 @@ import pickle
 # print(b.get_state()._boards_fen)
 
 # @param outcome: the result of the game. 0 means that team 1 won and team 2 lost, 1 means that team 1 lost and team 2 won
-def create_states_from_moves(moves, time, row, line, outputfile, value_and_policy_dict, outcome):
+def create_states_from_moves(moves, time, row, line, outputfile, value_and_policy_dict, outcome, looser):
     # bughouseEnv.reset()  # reset the object, to reuse it
     # set the initial time for every player
     bughouseEnv = BughouseEnv()
@@ -66,19 +66,45 @@ def create_states_from_moves(moves, time, row, line, outputfile, value_and_polic
             fen_key.append(str(team_number))
             fen_key.append(str(board_number))
             fen_key = ' '.join(fen_key)
+            looser_team = 0
+            looser_board = 0
+            if (looser == 'WhiteA'):
+                looser_team = 0
+                looser_board = 0
+            elif(looser == 'WhiteB'):
+                looser_team = 1
+                looser_board = 1
+            elif(looser == 'BlackA'):
+                looser_team = 1
+                looser_board = 0
+            elif(looser == 'BlackB'):
+                looser_team = 0
+                looser_board = 1
+            if(looser_team == team_number):
+                if(looser_board == board_number):
+                    value = -1
+                else:
+                    value = -0.8
+            else:
+                if(looser_board == board_number):
+                    value = 1
+                else:
+                    value = 0.8
+
             if outcome == '0-1':
                 winning_team = 0
             else:
                 winning_team = 1
             if fen_key in value_and_policy_dict:
-                value_and_policy_dict[fen_key][0].append(1 if winning_team == team_number else 0)
+                # value_and_policy_dict[fen_key][0].append(1 if winning_team == team_number else 0)
+                value_and_policy_dict[fen_key][0].append(value)
                 moves_dict = value_and_policy_dict[fen_key][1]
                 if san in moves_dict:
                     moves_dict[san] += 1
                 else:
                     moves_dict[san] = 1
             else:
-                value_and_policy_dict[fen_key] = ([1 if winning_team == team_number else -1], {san : 1})
+                value_and_policy_dict[fen_key] = ([value], {san : 1})
 
             #try to push the new move to the board. If move is illegal, break
             try:
@@ -109,7 +135,8 @@ def create_dataset(input_file_with_moves, output_file):
                 line += 1
                 b = BughouseEnv()
                 outcome = row[2]
-                value_and_policy_dict = create_states_from_moves(moves, row[0], row, line, output_file, value_and_policy_dict, outcome)
+                looser = row[3]
+                value_and_policy_dict = create_states_from_moves(moves, row[0], row, line, output_file, value_and_policy_dict, outcome, looser)
                 with open(output_file, 'ab') as output:  # save an empty string object in between each game
                     pickle.dump('', output, pickle.HIGHEST_PROTOCOL)
                 output.close()
