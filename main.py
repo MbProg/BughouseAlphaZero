@@ -48,6 +48,8 @@ from bughouse.keras.NNet import NNetWrapper as nn
 from BugHouseArena import BugHouseArena
 from utils import *
 from bughouse.BugHouseGame import display as display
+import sys
+sys.setrecursionlimit(400000)
 args = dotdict({
     'numIters': 1,
     'numEps': 10,
@@ -72,8 +74,8 @@ if __name__=="__main__":
     g = Game()
     nnet = nn(g)
     b = BugHouseArena(g,nnet,args,display)
-    b.playGame()
-
+    # b.playGame()
+    b.playAgainstServer()
     # if args.load_model:
     #     nnet.load_checkpoint(args.load_folder_file[0], args.load_folder_file[1])
 
@@ -81,4 +83,4 @@ if __name__=="__main__":
     # if args.load_model:
     #     print("Load trainExamples from file")
     #     c.loadTrainExamples()
-    # c.learn()
+# c.learn()
