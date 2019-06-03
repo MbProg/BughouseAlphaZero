@@ -115,7 +115,20 @@ def create_dataset(input_file_with_moves, output_file):
                 output.close()
     return value_and_policy_dict
 
-create_dataset('filtered_dataset_small.csv', 'bughouse_testset.csv')
+def read_dataset(state_file):
+    list_of_objects = []
+    with open(state_file,'rb') as csv_file:
+        while True:
+            try:
+                list_of_objects.append(pickle.load(csv_file))
+            except EOFError:
+                break
+    wholeArray = list_of_objects[0].getStackedNumpyArray()
+    print(wholeArray.shape)
+    return list_of_objects
+l = read_dataset('bughouse_testset.csv')
+# print(l)
+# create_dataset('filtered_dataset_small.csv', 'bughouse_testset.csv')
 # create_states_from_moves(moves, b, 180)
 
 
