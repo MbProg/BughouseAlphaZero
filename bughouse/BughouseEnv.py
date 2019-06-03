@@ -22,6 +22,17 @@ class BughouseState(object):
         self._boards_fen = _boards_fen
         #self.communation = []# ToDo
 
+    def getStackedNumpyArray(self):
+        castling_mat = np.concatenate(self.castling_mat,axis=0)
+        castling_mat = np.concatenate(castling_mat,axis=0)
+        piece_mat = np.concatenate(self.piece_mat,axis=0)
+        piece_mat = np.concatenate(piece_mat,axis=0)
+        player_mat = np.concatenate(self.player_mat,axis=0)
+        pocket_mat = np.concatenate(self.pocket_mat,axis=0)
+        pocket_mat = np.concatenate(pocket_mat,axis=0)
+        promoted_mat = np.concatenate(self.promoted_mat,axis=0)
+        wholeStackedState = np.concatenate([piece_mat,pocket_mat,player_mat,self.movecount_mat,promoted_mat,castling_mat])
+        return wholeStackedState
 
 class BughouseEnv():
     Color = bool
