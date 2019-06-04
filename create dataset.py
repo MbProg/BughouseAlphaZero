@@ -95,13 +95,25 @@ def create_states_from_moves(moves, time, row, line, outputfile, value_and_polic
                 pickle.dump(bughouseEnv.get_state(), output_file, pickle.HIGHEST_PROTOCOL)
                 output_file.close()
     return value_and_policy_dict
-def create_dataset(input_file_with_moves, output_file):
+def create_dataset(input_file_with_moves, output_file,extension):
     line = 0
     value_and_policy_dict = {}
+    counter = 0
+    state_output_file = ''
+    save_step = 500
     with open(input_file_with_moves) as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
         for row in csv_reader:
 
+            # save every thousand rows in one file
+            # also the policy and value should be saved in a seperate file 
+            if counter%save_step == 0:
+                print(counter)
+                state_output_file = output_file + '_' + str(int(counter/save_step)) + extension 
+                print(state_output_file)
+                # make backup of 'value_and_policy_dict.pkl'
+                __save_value_and_policy(r'dataset\BACK_value_and_policy_dict_' + str(int(counter/save_step)) +'.pkl',value_and_policy_dict)
+            counter +=1
             if not row or (row[0] in (None, "")):  # checks if row is empty
                 line += 1
             else:
@@ -109,11 +121,18 @@ def create_dataset(input_file_with_moves, output_file):
                 line += 1
                 b = BughouseEnv()
                 outcome = row[2]
-                value_and_policy_dict = create_states_from_moves(moves, row[0], row, line, output_file, value_and_policy_dict, outcome)
-                with open(output_file, 'ab') as output:  # save an empty string object in between each game
+                value_and_policy_dict = create_states_from_moves(moves, row[0], row, line, state_output_file, value_and_policy_dict, outcome)
+                with open(state_output_file, 'ab') as output:  # save an empty string object in between each game
                     pickle.dump('', output, pickle.HIGHEST_PROTOCOL)
                 output.close()
+
+
     return value_and_policy_dict
+
+def __save_value_and_policy(outputfile, value_and_policy_dict):
+    f = open(outputfile,'wb')
+    pickle.dump(value_and_policy_dict,f)
+    f.close()
 
 def read_dataset(state_file):
     list_of_objects = []
@@ -126,10 +145,19 @@ def read_dataset(state_file):
     wholeArray = list_of_objects[0].getStackedNumpyArray()
     print(wholeArray.shape)
     return list_of_objects
-l = read_dataset('bughouse_testset.csv')
+
+def read_value_and_policy_dict(state_file = 'value_and_policy_dict.pkl'):
+    list_of_objects = []
+    with open(state_file,'rb') as csv_file:
+        value_policy_dict = pickle.load(csv_file)
+
+    return value_policy_dict
+# l = read_dataset(r'dataset\bughouse_testset_0.csv')
 # print(l)
-# create_dataset('filtered_dataset_small.csv', 'bughouse_testset.csv')
+value_policy_dict = create_dataset('filtered_dataset_small.csv', r'dataset\bughouse_testset','.csv')
+# value_policy_dict = read_value_and_policy_dict(r'dataset\BACK_value_and_policy_dict_1.0.pkl')
 # create_states_from_moves(moves, b, 180)
+
 
 
 
