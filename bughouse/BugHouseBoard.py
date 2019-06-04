@@ -382,27 +382,14 @@ class BughouseBoards:
     def to_numpy(self, board : int):
         # Flip to get both player on the same side
         # main board
-        partner_color = not self.boards[board].turn
+        other_board = 1 if board == 0 else 0
+        partner_color = self.boards[board].turn
         piece_mat_m, pocket_mat_m, color_mat_m, movecount_mat_m, promoted_mat_m, castling_mat_m =\
             self.boards[board].to_numpy_single(True)
         piece_mat_p, pocket_mat_p, color_mat_p, movecount_mat_p, promoted_mat_p, castling_mat_p =\
-            self.boards[board].to_numpy_single(False, partner_color)
+            self.boards[other_board].to_numpy_single(False, partner_color)
         ret_mat = np.concatenate([piece_mat_m,piece_mat_p, pocket_mat_m, pocket_mat_p, np.stack([color_mat_m, color_mat_p]), np.stack([movecount_mat_m, movecount_mat_p]), promoted_mat_m, promoted_mat_p, castling_mat_m, castling_mat_p])
         return ret_mat
-
-    def getStackedNumpyArray(self):
-        castling_mat = np.concatenate(self.castling_mat, axis=0)
-        castling_mat = np.concatenate(castling_mat, axis=0)
-        piece_mat = np.concatenate(self.piece_mat, axis=0)
-        piece_mat = np.concatenate(piece_mat, axis=0)
-        player_mat = np.concatenate(self.player_mat, axis=0)
-        pocket_mat = np.concatenate(self.pocket_mat, axis=0)
-        pocket_mat = np.concatenate(pocket_mat, axis=0)
-        promoted_mat = np.concatenate(self.promoted_mat, axis=0)
-        wholeStackedState = np.concatenate(
-            [piece_mat, pocket_mat, player_mat, self.movecount_mat, promoted_mat, castling_mat])
-        return wholeStackedState
-
 
     def to_numpy_simplified(self, flip: bool):
         return np.concatenate((self.boards[0].to_numpy_simplified(False), self.boards[1].to_numpy_simplified(flip)),
