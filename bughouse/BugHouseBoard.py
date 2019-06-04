@@ -93,48 +93,142 @@ class _BughouseBoard(chess.variant.CrazyhouseBoard):
         normalization = 8.0  # max number of pawns
         pocket_mat = self.get_pockets_numpy(normalization)
 
-        # check which player is allowed to move
-        player_mat = np.zeros((2, 8, 8))
-        player_mat[int(self.turn), :, :] = 1 #Set Matrix to 1 for player that is allowed to move
+        # Team mat
+        color_mat = np.full((8, 8), int(self.turn))
 
         # check the move count of the players
         movecount_mat = np.full((8, 8), self.fullmove_number)
 
         #check castling rights
-        castling_mat = np.zeros((2, 2, 8, 8))
-        # WHITE
-        # check for King Side Castling
-        if bool(self.castling_rights & chess.BB_H1) is True:
-            # White can castle with the h1 rook
-            castling_mat[chess.WHITE, 0, :, :] = 1
-        # check for Queen Side Castling
-        if bool(self.castling_rights & chess.BB_A1) is True:
-            castling_mat[chess.WHITE, 1, :, :] = 1
-
-        # BLACK
-        # check for King Side Castling
-        if bool(self.castling_rights & chess.BB_H8) is True:
-            # White can castle with the h1 rook
-            castling_mat[chess.BLACK, 0, :, :] = 1
-        # check for Queen Side Castling
-        if bool(self.castling_rights & chess.BB_A8) is True:
-            castling_mat[chess.BLACK, 1, :, :] = 1
+        castling_mat = self.get_castling_mat()
 
         # ToDo implment flippping
 
-        return piece_mat, pocket_mat, player_mat, movecount_mat, promoted_mat, castling_mat
+        return piece_mat, pocket_mat, color_mat, movecount_mat, promoted_mat, castling_mat
 
-    def get_pockets_numpy(self, normalization = 8):
+    def to_numpy_single(self,main_board: bool, main_board_player: bool = chess.WHITE):
+        #order of figurs
+        # Black = 0, White = 1
+        # PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING
+
+        if main_board:
+            curr_player = self.turn
+        else:
+            curr_player = not main_board_player
+
+        # Piece postions on the board and promoted pieces
+        piece_mat = np.zeros((2, 6, 8, 8))
+        promoted_mat = np.zeros((2, 8, 8))  # First White then Black
+        rank = 0
+        file = 0
+        # check each tile for figures and promotion
+        WHITE = True
+        BLACK = False
+        # correct postionion so that current player get pos 0 and opponent pos 1
+        curr_player = self.turn
+        #  Get pieces and promoted
+        for square in chess.SQUARES_180:
+            mask = chess.BB_SQUARES[square]
+            if self.occupied & mask:
+                if self.pawns & mask:
+                    color = int(bool(self.occupied_co[chess.WHITE] & mask)and not curr_player)
+                    fig = chess.PAWN - 1
+                    piece_mat[color, fig, rank, file] = 1
+                elif self.knights & mask:
+                    color = int(bool(self.occupied_co[chess.WHITE] & mask)and not curr_player)
+                    fig = chess.KNIGHT - 1
+                    piece_mat[color, fig, rank, file] = 1
+                elif self.bishops & mask:
+                    color = int(bool(self.occupied_co[chess.WHITE] & mask) and not curr_player)
+                    fig = chess.BISHOP - 1
+                    piece_mat[color, fig, rank, file] = 1
+                elif self.rooks & mask:
+                    color = int(bool(self.occupied_co[chess.WHITE] & mask)and not curr_player)
+                    fig = chess.ROOK - 1
+                    piece_mat[color, fig, rank, file] = 1
+                elif self.queens & mask:
+                    color = int(bool(self.occupied_co[chess.WHITE] & mask)and not curr_player)
+                    fig = chess.QUEEN - 1
+                    piece_mat[color, fig, rank, file] = 1
+                elif self.kings & mask:
+                    color = int(bool(self.occupied_co[chess.WHITE] & mask)and not curr_player)
+                    fig = chess.KING - 1
+                    piece_mat[color, fig, rank, file] = 1
+                # check for promotion
+                if self.promoted & mask:
+                    color = int(bool(self.occupied_co[chess.WHITE] & mask)and not curr_player)
+                    promoted_mat[color, rank, file]
+
+            # Flip the positions for Black player
+            file  += 1
+            if file >= 8:
+                file = 0
+                rank += 1
+        if curr_player == chess.BLACK:
+            piece_mat = np.flip(np.flip(piece_mat, 2), 3)
+            promoted_mat = np.flip(np.flip(promoted_mat, 1), 2)
+        piece_mat = np.concatenate(piece_mat, axis=0)
+        # Get Pockets
+        normalization = 8.0  # max number of pawns
+        pocket_mat = self.get_pockets_numpy(normalization, curr_player) # Flip if current is WHITE
+
+        # Team mat
+        color_mat = np.full((8, 8), int(self.turn))
+
+        # check the move count of the players
+        movecount_mat = np.full((8, 8), self.fullmove_number)
+
+        #check castling rights
+        castling_mat = self.get_castling_mat(curr_player)
+        return piece_mat, pocket_mat, color_mat, movecount_mat, promoted_mat, castling_mat
+
+    def get_pockets_numpy(self, normalization = 8, player: bool = False):
         # oder of Pocket LEFT, RIGHT
         # order of colors WHITE = 1, BLACK = 0
         # White PAWN, KNIGHT, BISHOP, ROOK, QUEEN then Black PAWN, KNIGHT, BISHOP, ROOK, QUEEN
         # 8x8 is network input size
         ret_pockets = np.zeros((2, 5, 8, 8))
-        for pt, count in self.pockets[chess.BLACK].pieces.items():
-            ret_pockets[int(chess.BLACK), pt - 1, :, :] = float(count) / normalization
-        for pt, count in self.pockets[chess.WHITE].pieces.items():
-            ret_pockets[int(chess.WHITE), pt - 1, :, :] = float(count) / normalization
-        return ret_pockets
+        if not player:  # changes the pocket order if necesary
+            for pt, count in self.pockets[chess.BLACK].pieces.items():
+                ret_pockets[int(chess.BLACK), pt - 1, :, :] = float(count) / normalization
+            for pt, count in self.pockets[chess.WHITE].pieces.items():
+                ret_pockets[int(chess.WHITE), pt - 1, :, :] = float(count) / normalization
+        else:
+            for pt, count in self.pockets[chess.BLACK].pieces.items():
+                ret_pockets[int(not chess.BLACK), pt - 1, :, :] = float(count) / normalization
+            for pt, count in self.pockets[chess.WHITE].pieces.items():
+                ret_pockets[int(not chess.WHITE), pt - 1, :, :] = float(count) / normalization
+        return np.concatenate(ret_pockets, axis = 0)
+
+    def get_castling_mat(self, player: bool):
+        #check castling rights
+        castling_mat = np.zeros((2, 2, 8, 8))
+        # WHITE
+        if player: #check if player is WHITE
+            if bool(self.castling_rights & chess.BB_H1) is True:
+            # White can castle with the h1 rook
+                castling_mat[0, 0, :, :] = 1
+            # check for Queen Side Castling
+            if bool(self.castling_rights & chess.BB_A1) is True:
+                castling_mat[0, 1, :, :] = 1
+            # BLACK
+            # check for King Side Castling
+            if bool(self.castling_rights & chess.BB_H8) is True:
+                # White can castle with the h1 rook
+                castling_mat[1, 0, :, :] = 1
+            # check for Queen Side Castling
+            if bool(self.castling_rights & chess.BB_A8) is True:
+                castling_mat[1, 1, :, :] = 1
+        else:
+            if bool(self.castling_rights & chess.BB_H1) is True:
+                castling_mat[1, 0, :, :] = 1
+            if bool(self.castling_rights & chess.BB_A1) is True:
+                castling_mat[1, 1, :, :] = 1
+            if bool(self.castling_rights & chess.BB_H8) is True:
+                castling_mat[0, 0, :, :] = 1
+            if bool(self.castling_rights & chess.BB_A8) is True:
+                castling_mat[0, 1, :, :] = 1
+        return np.concatenate(castling_mat, axis = 0)
 
     def to_numpy_simplified(self, flip: bool):
         board_state_game = np.zeros((8, 8))
@@ -177,7 +271,7 @@ class BughouseBoards:
     aliases = ["Bughouse", "Bug House", "BH"]
     uci_variant = "bughouse"
     xboard_variant = "bughouse"
-    starting_fen = ["rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR[] w KQkq - 0 1", #8/3K4/8/5k2/8/8/8/8 w KQkq - 0 1
+    starting_fen = ["rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR[] w KQkq - 0 1",
                     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR[] w KQkq - 0 1"]
 
     tbw_suffix = tbz_suffix = None
@@ -275,15 +369,40 @@ class BughouseBoards:
     def generate_legal_moves(self, board):
         return self.boards[board].generate_legal_moves()
 
-    def to_numpy(self, flip: bool):
+    # def to_numpy(self, flip: bool):
+    #     # Flip to get both player on the same side
+    #     piece_mat_l, pocket_mat_l, player_mat_l, movecount_mat_l, promoted_mat_l, castling_mat_l =\
+    #         self.boards[0].to_numpy(False)
+    #     piece_mat_r, pocket_mat_r, player_mat_r, movecount_mat_r, promoted_mat_r, castling_mat_r = \
+    #         self.boards[0].to_numpy(False)
+    #     return np.array([piece_mat_l, piece_mat_r+1]), np.array([pocket_mat_l, pocket_mat_r+1]), \
+    #            np.array([player_mat_l, player_mat_r+1]), np.array([movecount_mat_l, movecount_mat_r+1]), \
+    #            np.array([promoted_mat_l, promoted_mat_r+1]),np.array([castling_mat_l, castling_mat_r+1])
+
+    def to_numpy(self, board : int):
         # Flip to get both player on the same side
-        piece_mat_l, pocket_mat_l, player_mat_l, movecount_mat_l, promoted_mat_l, castling_mat_l =\
-            self.boards[0].to_numpy(False)
-        piece_mat_r, pocket_mat_r, player_mat_r, movecount_mat_r, promoted_mat_r, castling_mat_r = \
-            self.boards[0].to_numpy(False)
-        return np.array([piece_mat_l, piece_mat_r+1]), np.array([pocket_mat_l, pocket_mat_r+1]), \
-               np.array([player_mat_l, player_mat_r+1]), np.array([movecount_mat_l, movecount_mat_r+1]), \
-               np.array([promoted_mat_l, promoted_mat_r+1]),np.array([castling_mat_l, castling_mat_r+1])
+        # main board
+        partner_color = not self.boards[board].turn
+        piece_mat_m, pocket_mat_m, color_mat_m, movecount_mat_m, promoted_mat_m, castling_mat_m =\
+            self.boards[board].to_numpy_single(True)
+        piece_mat_p, pocket_mat_p, color_mat_p, movecount_mat_p, promoted_mat_p, castling_mat_p =\
+            self.boards[board].to_numpy_single(False, partner_color)
+        ret_mat = np.concatenate([piece_mat_m,piece_mat_p, pocket_mat_m, pocket_mat_p, np.stack([color_mat_m, color_mat_p]), np.stack([movecount_mat_m, movecount_mat_p]), promoted_mat_m, promoted_mat_p, castling_mat_m, castling_mat_p])
+        return ret_mat
+
+    def getStackedNumpyArray(self):
+        castling_mat = np.concatenate(self.castling_mat, axis=0)
+        castling_mat = np.concatenate(castling_mat, axis=0)
+        piece_mat = np.concatenate(self.piece_mat, axis=0)
+        piece_mat = np.concatenate(piece_mat, axis=0)
+        player_mat = np.concatenate(self.player_mat, axis=0)
+        pocket_mat = np.concatenate(self.pocket_mat, axis=0)
+        pocket_mat = np.concatenate(pocket_mat, axis=0)
+        promoted_mat = np.concatenate(self.promoted_mat, axis=0)
+        wholeStackedState = np.concatenate(
+            [piece_mat, pocket_mat, player_mat, self.movecount_mat, promoted_mat, castling_mat])
+        return wholeStackedState
+
 
     def to_numpy_simplified(self, flip: bool):
         return np.concatenate((self.boards[0].to_numpy_simplified(False), self.boards[1].to_numpy_simplified(flip)),
