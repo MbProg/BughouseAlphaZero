@@ -12,4 +12,7 @@ checkpoints/
 .idea/
 
 pretrained_models/
+.vscode/settings.json
 bughouse_testset.csv
+*.orig
+dataset/

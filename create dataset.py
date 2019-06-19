@@ -1,3 +1,5 @@
+import constants
+import numpy as np
 import re
 from bughouse.BughouseEnv import BughouseEnv
 import csv
@@ -19,8 +21,15 @@ import pickle
 # moves = '1A. Qe7+{118.979} 1B. Nf3{116.510} 1a. Be3{115.283} 1b. exd4{117.312} 2A. Bxc3+{118.879} 2a. bxc3{114.627} 2B. Nxd4{115.620} 3A. Bg4{118.028} 2b. Nc6{116.234} 3a. P@e5{113.846} 3B. Nxc6{114.167} 4A. P@e4{116.686} 3b. bxc6{116.134} 4B. Nc3{114.011} 4a. Rg1{112.424} 5A. exf3{115.695} 4b. Bc5{114.338} 5a. gxf3{111.815} 6A. Bxf3{114.773} 6a. Qxf3{110.924} 5B. P@d4{111.479} 7A. fxe5{114.493} 5b. Bb4{113.479} 7a. N@f5{109.987} 8A. Qd7{113.061} 6B. N@e5{109.744} 8a. Nxg7+{108.940} 9A. Kd8{112.721} 6b. N@e4{110.870} 9a. Bg5+{106.971} 7B. Nxf7{108.525} 10A. Kc8{111.930} 7b. Nxc3{109.542} 8B. bxc3{107.228} 10a. N@c5{103.596} 8b. Bxc3+{108.448} 9B. Bd2{106.150} 11A. e4{108.795} 9b. Bxd4{106.666} 10B. e3{102.837} 11a. Nxd7{98.643} 12A. exf3{107.513} 10b. Qf6{103.509} 12a. Nc5{95.284} 11B. Nxh8{94.259} 13A. P@d7{101.144} 13a. P@a6{94.018} 11b. Qxf2+{101.837} 12B. Kxf2{94.159} 14A. Rb8{99.602} 14a. axb7+{90.940} 15A. Rxb7{98.971} 12b. B@h4+{95.103} 15a. P@a6{88.877} 13B. P@g3{92.612} 16A. R@b1+{96.868} 16a. Bc1{85.581} 13b. P@f7{84.228} 14B. P@g6{88.956} 14b. hxg6{82.338} 17A. Rxa1{83.289} 17a. axb7+{84.316} 15B. P@h7{86.940} 18A. Kb8{82.057} 15b. Nf6{75.525} 18a. Nxd7+{66.003} 19A. Kxb7{81.226} 19a. Nc5+{65.706} 20A. Kb8{80.835} 16B. Qf3{70.550} 20a. Na6+{64.191} 21A. Ka8{80.034} 21a. P@b7+{62.800} 22A. Kxb7{79.683} 22a. Nc5+{62.503} 23A. Kb8{79.162} 23a. Na6+{61.112} 16b. R@f8{68.962} 24A. Ka8{78.290} 24a. P@b7+{59.831} 25A. Kxb7{77.799} 25a. Nc5+{59.238} 26A. Kb8{77.508}'
 # print(b.get_state()._boards_fen)
 
+class RL_Datapoint():
+    def __init__(self, state, policy, values):
+        self.state = state
+        self.policy = policy
+        self.values = values
+
+
 # @param outcome: the result of the game. 0 means that team 1 won and team 2 lost, 1 means that team 1 lost and team 2 won
-def create_states_from_moves(moves, time, row, line, outputfile, value_and_policy_dict, outcome):
+def create_states_from_moves(moves, time, row, line, outputfile, value_and_policy_dict, outcome, looser):
     # bughouseEnv.reset()  # reset the object, to reuse it
     # set the initial time for every player
     bughouseEnv = BughouseEnv()
@@ -66,42 +75,81 @@ def create_states_from_moves(moves, time, row, line, outputfile, value_and_polic
             fen_key.append(str(team_number))
             fen_key.append(str(board_number))
             fen_key = ' '.join(fen_key)
+            looser_team = 0
+            looser_board = 0
+            if (looser == 'WhiteA'):
+                looser_team = 0
+                looser_board = 0
+            elif(looser == 'WhiteB'):
+                looser_team = 1
+                looser_board = 1
+            elif(looser == 'BlackA'):
+                looser_team = 1
+                looser_board = 0
+            elif(looser == 'BlackB'):
+                looser_team = 0
+                looser_board = 1
+            if(looser_team == team_number):
+                if(looser_board == board_number):
+                    value = -1
+                else:
+                    value = -0.8
+            else:
+                if(looser_board == board_number):
+                    value = 1
+                else:
+                    value = 0.8
+
             if outcome == '0-1':
                 winning_team = 0
             else:
                 winning_team = 1
-            if fen_key in value_and_policy_dict:
-                value_and_policy_dict[fen_key][0].append(1 if winning_team == team_number else 0)
-                moves_dict = value_and_policy_dict[fen_key][1]
-                if san in moves_dict:
-                    moves_dict[san] += 1
-                else:
-                    moves_dict[san] = 1
-            else:
-                value_and_policy_dict[fen_key] = ([1 if winning_team == team_number else -1], {san : 1})
 
             #try to push the new move to the board. If move is illegal, break
             try:
-                bughouseEnv.push_san(san, team_number, board_number)
+                uci_move = bughouseEnv.push_san(san, team_number, board_number, to_uci=True)
+                if fen_key in value_and_policy_dict:
+                    # value_and_policy_dict[fen_key][0].append(1 if winning_team == team_number else 0)
+                    value_and_policy_dict[fen_key][0].append(value)
+                    moves_dict = value_and_policy_dict[fen_key][1]
+                    if uci_move in moves_dict:
+                        moves_dict[uci_move] += 1
+                    else:
+                        moves_dict[uci_move] = 1
+                else:
+                    value_and_policy_dict[fen_key] = ([value], {uci_move : 1})
             except:
                 print(row)
                 print(line)
                 line_of_games_with_illegal_moves.append(line)
                 break
             bughouseEnv.set_time_remaining(time, team_number, board_number)
-
+            rl_datapoint = RL_Datapoint(bughouseEnv.get_state(), value_and_policy_dict[fen_key][1],value_and_policy_dict[fen_key][0] )
 
             with open(outputfile, 'ab') as output_file:
-                pickle.dump(bughouseEnv.get_state(), output_file, pickle.HIGHEST_PROTOCOL)
+                # pickle.dump(bughouseEnv.get_state(), output_file, pickle.HIGHEST_PROTOCOL)
+                pickle.dump(rl_datapoint, output_file, pickle.HIGHEST_PROTOCOL)
                 output_file.close()
     return value_and_policy_dict
-def create_dataset(input_file_with_moves, output_file):
+def create_dataset(input_file_with_moves, output_file,extension):
     line = 0
     value_and_policy_dict = {}
+    counter = 0
+    state_output_file = ''
+    save_step = 200
     with open(input_file_with_moves) as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
         for row in csv_reader:
 
+            # save every thousand rows in one file
+            # also the policy and value should be saved in a seperate file 
+            if counter%save_step == 0:
+                print(counter)
+                state_output_file = output_file + '_' + str(int(counter/save_step)) + extension 
+                print(state_output_file)
+                # make backup of 'value_and_policy_dict.pkl'
+                # __save_value_and_policy(r'dataset\BACK_value_and_policy_dict_' + str(int(counter/save_step)) +'.pkl',value_and_policy_dict)
+            counter +=1
             if not row or (row[0] in (None, "")):  # checks if row is empty
                 line += 1
             else:
@@ -109,14 +157,89 @@ def create_dataset(input_file_with_moves, output_file):
                 line += 1
                 b = BughouseEnv()
                 outcome = row[2]
-                value_and_policy_dict = create_states_from_moves(moves, row[0], row, line, output_file, value_and_policy_dict, outcome)
-                with open(output_file, 'ab') as output:  # save an empty string object in between each game
+                looser = row[3]
+                value_and_policy_dict = create_states_from_moves(moves, row[0], row, line, state_output_file, value_and_policy_dict, outcome, looser)
+                with open(state_output_file, 'ab') as output:  # save an empty string object in between each game
                     pickle.dump('', output, pickle.HIGHEST_PROTOCOL)
                 output.close()
+
+
     return value_and_policy_dict
 
-create_dataset('filtered_dataset_small.csv', 'bughouse_testset.csv')
+def __save_value_and_policy(outputfile, value_and_policy_dict):
+    f = open(outputfile,'wb')
+    pickle.dump(value_and_policy_dict,f)
+    f.close()
+
+def read_dataset(state_file):
+    list_of_objects = []
+    with open(state_file,'rb') as csv_file:
+        while True:
+            try:
+                list_of_objects.append(pickle.load(csv_file))
+            except EOFError:
+                break
+    return list_of_objects
+
+def read_value_and_policy_dict(file = 'value_and_policy_dict.pkl'):
+    list_of_objects = []
+    with open(file,'rb') as pkl_file:
+        value_policy_dict = pickle.load(pkl_file)
+
+    return value_policy_dict
+
+def createDataset(state_file,value_policy_file):
+    rl_datapoints = read_dataset(state_file)
+    examples = []
+    for rl_datapoint in rl_datapoints:
+        if isinstance(rl_datapoint,str):
+            continue
+
+        values, policyDict = rl_datapoint.values,rl_datapoint.policy
+        value = np.mean(values)
+
+        policy = np.mean([np.mean(elem) for elem in list(policyDict.values())])
+
+        if len(list(policyDict.values()))> 1:
+            sldkjf = 1
+
+        # create the policy vector
+        keys = np.array(list(policyDict.keys()))
+        policy_values = np.array(list(policyDict.values()))
+
+        if len(policy_values[policy_values>1]):
+            skdjfj=1
+
+        policy = np.zeros(constants.NB_LABELS)
+        str_policies = np.array(constants.LABELS)
+        policy[np.where(np.isin(str_policies, keys))] = policy_values
+        policy = policy / sum(policy)
+
+
+        examples.append((rl_datapoint.state.getStackedNumpyArray(),policy,value))
+    return examples
+
+# l = read_dataset(r'dataset\bughouse_testset_0.csv')
+# print(l)
+# value_policy_dict = create_dataset('filtered_dataset_small.csv', r'dataset\bughouse_testset','.csv')
+import os 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+examples = createDataset(r'dataset\bughouse_testset_0.csv',r'dataset\BACK_value_and_policy_dict_36.pkl')
+length = len(examples)
+train_set = examples[:(int(length*0.7))]
+val_set = examples[(int(length*0.7)):(int(length*0.85))]
+test_set = examples[(int(length*0.85)):]
+
+from bughouse.keras.NNet import NNetWrapper as nn
+from bughouse.BugHouseGame import BugHouseGame as Game
+
+g = Game()
+nnet = nn(g)
+
+nnet.train(train_set)
+# value_policy_dict = read_value_and_policy_dict(r'dataset\BACK_value_and_policy_dict_1.0.pkl')
 # create_states_from_moves(moves, b, 180)
+
 
 
 
