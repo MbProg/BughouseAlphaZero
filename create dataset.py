@@ -27,11 +27,12 @@ class RL_Datapoint():
         self.policy = policy
         self.values = values
 
-
+ID = 0
 # @param outcome: the result of the game. 0 means that team 1 won and team 2 lost, 1 means that team 1 lost and team 2 won
 def create_states_from_moves(moves, time, row, line, outputfile, value_and_policy_dict, outcome, looser):
     # bughouseEnv.reset()  # reset the object, to reuse it
     # set the initial time for every player
+    global ID
     bughouseEnv = BughouseEnv()
     bughouseEnv.set_time_remaining(time, 0, 0)
     bughouseEnv.set_time_remaining(time, 0, 1)
@@ -124,12 +125,24 @@ def create_states_from_moves(moves, time, row, line, outputfile, value_and_polic
                 line_of_games_with_illegal_moves.append(line)
                 break
             bughouseEnv.set_time_remaining(time, team_number, board_number)
-            rl_datapoint = RL_Datapoint(bughouseEnv.get_state(), value_and_policy_dict[fen_key][1],value_and_policy_dict[fen_key][0] )
 
-            with open(outputfile, 'ab') as output_file:
+            policy = np.zeros(constants.NB_LABELS)
+            str_policies = np.array(constants.LABELS)
+            policy[np.where(np.isin(str_policies, uci_move))] = 1.
+            rl_datapoint = RL_Datapoint(bughouseEnv.get_state(), policy, value)
+
+            with open('dataset/' + str(ID) + '.pkl', 'wb') as output_file:
                 # pickle.dump(bughouseEnv.get_state(), output_file, pickle.HIGHEST_PROTOCOL)
                 pickle.dump(rl_datapoint, output_file, pickle.HIGHEST_PROTOCOL)
                 output_file.close()
+            ID+=1
+
+            # rl_datapoint = RL_Datapoint(bughouseEnv.get_state(), value_and_policy_dict[fen_key][1],value_and_policy_dict[fen_key][0] )
+
+            # with open(outputfile, 'ab') as output_file:
+            #     # pickle.dump(bughouseEnv.get_state(), output_file, pickle.HIGHEST_PROTOCOL)
+            #     pickle.dump(rl_datapoint, output_file, pickle.HIGHEST_PROTOCOL)
+            #     output_file.close()
     return value_and_policy_dict
 def create_dataset(input_file_with_moves, output_file,extension):
     line = 0
@@ -219,9 +232,9 @@ def createDataset(state_file,value_policy_file):
         examples.append((rl_datapoint.state.getStackedNumpyArray(),policy,value))
     return examples
 
-# l = read_dataset(r'dataset\bughouse_testset_0.csv')
+# l = read_dataset(r'dataset\0.pkl')
 # print(l)
-# value_policy_dict = create_dataset('filtered_dataset_small.csv', r'dataset\bughouse_testset','.csv')
+value_policy_dict = create_dataset('filtered_dataset_small.csv', r'dataset\bughouse_testset','.csv')
 import os 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 examples = createDataset(r'dataset\bughouse_testset_0.csv',r'dataset\BACK_value_and_policy_dict_36.pkl')
