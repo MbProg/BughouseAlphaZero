@@ -16,3 +16,5 @@ pretrained_models/
 bughouse_testset.csv
 *.orig
 dataset/
+models/
+filtered_dataset_small - Copy.csv
