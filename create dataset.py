@@ -149,7 +149,8 @@ def create_dataset(input_file_with_moves, output_file,extension):
     value_and_policy_dict = {}
     counter = 0
     state_output_file = ''
-    save_step = 200
+    save_step = 1000
+    games_count= 0
     with open(input_file_with_moves) as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
         for row in csv_reader:
@@ -174,6 +175,8 @@ def create_dataset(input_file_with_moves, output_file,extension):
                 value_and_policy_dict = create_states_from_moves(moves, row[0], row, line, state_output_file, value_and_policy_dict, outcome, looser)
                 with open(state_output_file, 'ab') as output:  # save an empty string object in between each game
                     pickle.dump('', output, pickle.HIGHEST_PROTOCOL)
+                    games_count+=1
+                    print('Game nr: ' , games_count)
                 output.close()
 
 
@@ -204,6 +207,7 @@ def read_value_and_policy_dict(file = 'value_and_policy_dict.pkl'):
 def createDataset(state_file,value_policy_file):
     rl_datapoints = read_dataset(state_file)
     examples = []
+    counter = 0
     for rl_datapoint in rl_datapoints:
         if isinstance(rl_datapoint,str):
             continue
@@ -229,27 +233,36 @@ def createDataset(state_file,value_policy_file):
         policy = policy / sum(policy)
 
 
-        examples.append((rl_datapoint.state.getStackedNumpyArray(),policy,value))
+        examples.append((rl_datapoint.state.matrice_stack,policy,value))
+        counter+=1
+        if counter == 10:
+            break
     return examples
 
 # l = read_dataset(r'dataset\0.pkl')
 # print(l)
 value_policy_dict = create_dataset('filtered_dataset_small.csv', r'dataset\bughouse_testset','.csv')
-import os 
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-examples = createDataset(r'dataset\bughouse_testset_0.csv',r'dataset\BACK_value_and_policy_dict_36.pkl')
-length = len(examples)
-train_set = examples[:(int(length*0.7))]
-val_set = examples[(int(length*0.7)):(int(length*0.85))]
-test_set = examples[(int(length*0.85)):]
+# import os 
+# os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 from bughouse.keras.NNet import NNetWrapper as nn
 from bughouse.BugHouseGame import BugHouseGame as Game
-
 g = Game()
 nnet = nn(g)
+for i in range (0,23):
 
-nnet.train(train_set)
+    examples = createDataset(r'dataset\bughouse_testset_' + str(i) + '.csv',r'dataset\BACK_value_and_policy_dict_36.pkl')
+    length = len(examples)
+    train_set = examples[:(int(length*0.9))]
+    val_set = examples[(int(length*0.9)):]
+# test_set = examples[(int(length*0.85)):]
+
+
+
+
+    nnet.train(train_set,val_set,'VGG16_'+str(i))
+    if i == 12:
+        break
 # value_policy_dict = read_value_and_policy_dict(r'dataset\BACK_value_and_policy_dict_1.0.pkl')
 # create_states_from_moves(moves, b, 180)
 

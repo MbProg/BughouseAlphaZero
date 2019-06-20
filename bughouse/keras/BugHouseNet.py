@@ -12,7 +12,7 @@ class BugHouseNet():
     def __init__(self, game, args):
         self.CLASSES_LEN = NB_LABELS
         self.channel_pos = 'channels_last'
-        self.inp_shape = (62,8,8) # TODO: this should be read from the environment
+        self.inp_shape = (60,8,8) # TODO: this should be read from the environment
         inp = Input(self.inp_shape)
         # Block 1
         x = self.__VGG_Conv2DBlock(64, (3,3), 'relu', 'same',self.channel_pos, inp, 2, inp_shape=self.inp_shape)
