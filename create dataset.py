@@ -38,7 +38,6 @@ def create_states_from_moves(moves, time, row, line, outputfile, value_and_polic
     bughouseEnv.set_time_remaining(time, 0, 1)
     bughouseEnv.set_time_remaining(time, 1, 0)
     bughouseEnv.set_time_remaining(time, 1, 1)
-    games_with_illegal_moves = {}
     line_of_games_with_illegal_moves = list()
     while moves:
         if(moves.isspace()) : break
@@ -76,8 +75,8 @@ def create_states_from_moves(moves, time, row, line, outputfile, value_and_polic
             fen_key.append(str(team_number))
             fen_key.append(str(board_number))
             fen_key = ' '.join(fen_key)
-            looser_team = 0
-            looser_board = 0
+            looser_team = -1 #the default is a draw
+            looser_board = -1
             if (looser == 'WhiteA'):
                 looser_team = 0
                 looser_board = 0
@@ -95,6 +94,8 @@ def create_states_from_moves(moves, time, row, line, outputfile, value_and_polic
                     value = -1
                 else:
                     value = -0.8
+            elif(looser_team == -1): #if the result is a draw, the value is 0 for all players
+                    value = 0
             else:
                 if(looser_board == board_number):
                     value = 1
