@@ -2,6 +2,7 @@ import numpy as np
 import keras
 import pickle
 
+
 class RL_Datapoint():
     def __init__(self, state, policy, values):
         self.state = state
@@ -11,12 +12,11 @@ class RL_Datapoint():
 
 class DataGenerator(keras.utils.Sequence):
     'Generates data for Keras'
-    def __init__(self, list_IDs, labels, batch_size=32, dim=(32,32,32), n_channels=1,
+    def __init__(self, list_IDs, batch_size=32, dim=(32,32,32), n_channels=1,
                  n_classes=10, shuffle=True):
         'Initialization'
         self.dim = dim
         self.batch_size = batch_size
-        self.labels = labels
         self.list_IDs = list_IDs
         self.n_channels = n_channels
         self.n_classes = n_classes
@@ -50,7 +50,8 @@ class DataGenerator(keras.utils.Sequence):
         'Generates data containing batch_size samples' # X : (n_samples, *dim, n_channels)
         # Initialization
         X = np.empty((self.batch_size, *self.dim))
-        y = np.empty((self.batch_size), dtype=dict)
+        y1 = np.empty((self.batch_size, 2272), dtype=dict)
+        y2 = np.empty((self.batch_size), dtype=dict)
 
         # Generate data
         for i, ID in enumerate(list_IDs_temp):
@@ -62,13 +63,113 @@ class DataGenerator(keras.utils.Sequence):
                     break
 
             # Store sample
-            X[i,] = rl_datapoint.state.matrice_stack
+            X[i,] = rl_datapoint.state
 
             # Store class
-            y[i] = {'policy': rl_datapoint.policy, 'value': rl_datapoint.values} # [rl_datapoint.policy,rl_datapoint.values]
+            y1[i] = rl_datapoint.policy
+            y2[i] = rl_datapoint.values # [rl_datapoint.policy,rl_datapoint.values]
+        return X, [y1,y2]
 
-        return X, y
+def __VGG_Conv2DBlock( depth, kernelshape, activation, padding,channel_pos, x, conv_amount = 3, inp_shape=None):
+    ''' 
+    channel_pos must be 3, because keras has a problem with channel_first in BatchNormalization which is not fixed yet
+    thus use: A = np.moveaxis(A,0,-1) to move the channel axis to the last index
 
-dg = DataGenerator(np.arange(4997), None, dim=(60,8,8))
-dg.on_epoch_end()
-dg.__getitem__(0)
+    '''
+
+    bn_axis = 3
+        
+    if inp_shape==None:
+        x = Conv2D(depth, kernel_size=kernelshape, padding = padding,data_format=channel_pos)(x)
+    else:
+        x = Conv2D(depth, kernel_size=kernelshape, padding = padding, input_shape=inp_shape,data_format=channel_pos)(x)
+    x = BatchNormalization(axis=bn_axis)(x)
+    x = Activation(activation)(x)
+    x = Conv2D(depth, kernel_size=kernelshape, padding = padding,data_format=channel_pos)(x)
+    x = BatchNormalization(axis=bn_axis)(x)
+    x = Activation(activation)(x)
+    if conv_amount == 3:
+        x = Conv2D(depth, kernel_size=kernelshape, padding = padding,data_format=channel_pos)(x)
+        x = BatchNormalization(axis=bn_axis)(x)
+        x = Activation(activation)(x)
+        
+    return x
+def plotHistory( history):
+    import matplotlib.pyplot as plt
+
+    val_loss = history.history['val_loss']
+    val_policy_loss = history.history['val_policy_loss']
+    val_value_loss = history.history['val_value_loss']
+    loss = history.history['loss']
+    policy_loss = history.history['policy_loss']
+    value_loss = history.history['value_loss']
+    
+    epochs = range(1,len(loss) + 1)
+
+    # fig, ax = plt.subplots(nrows=2, ncols=2)
+    fig = plt.figure()
+
+    plt.subplot(2, 2, 1)
+    plt.plot(epochs,loss,'bo',label='loss')
+    plt.plot(epochs,val_loss,'b',label='val_loss')
+    plt.title = 'Training and validation loss'
+    plt.legend()
+
+    plt.subplot(2, 2, 2)
+    plt.plot(epochs,policy_loss,'bo',label='policy_loss')
+    plt.plot(epochs,val_policy_loss,'b',label='val_policy_loss')
+    plt.title = 'Training and validation policy loss'
+    plt.legend()        
+
+    plt.subplot(2, 2, 3)
+    plt.plot(epochs,value_loss,'bo',label='value_loss')
+    plt.plot(epochs,val_value_loss,'b',label='val_value_loss')
+    plt.title = 'Training and validation value loss'
+    plt.legend()
+    plt.show()
+import keras.backend as K
+from keras.models import Model
+from keras.layers import Input, Dense, Conv2D, Flatten, BatchNormalization, Activation
+from keras import optimizers
+
+CLASSES_LEN = 2272
+channel_pos = 'channels_last'
+inp_shape = (60,8,8) # TODO: this should be read from the environment
+inp = Input(inp_shape)
+# Block 1
+x = __VGG_Conv2DBlock(64, (3,3), 'relu', 'same',channel_pos, inp, 2, inp_shape=inp_shape)
+# Block 2 
+x = __VGG_Conv2DBlock(96, (3,3), 'relu', 'same',channel_pos, x, 2)
+# Block 3
+x = __VGG_Conv2DBlock(128, (3,3), 'relu', 'same',channel_pos, x)
+# Block 4
+x = __VGG_Conv2DBlock(190, (3,3), 'relu', 'same',channel_pos, x)
+# Block 5 
+x = __VGG_Conv2DBlock(190, (3,3), 'relu', 'same',channel_pos, x)
+
+x = Flatten()(x)
+dense_1 = Dense(128, activation='relu')(x)
+
+value = Dense(1, activation='tanh', name='value')(dense_1)
+policy = Dense(CLASSES_LEN, activation='softmax', name='policy')(dense_1)
+
+model = Model(inp, [policy,value])
+model.compile(loss=['categorical_crossentropy','mean_squared_error'], optimizer=optimizers.RMSprop(0.00001),
+              metrics=['accuracy'])
+model.summary()
+
+whole_ids = np.arange(100000)
+np.random.shuffle(whole_ids)
+train_ids = whole_ids[:int(len(whole_ids)*0.9)]
+val_ids = whole_ids[int(len(whole_ids)*0.9):]
+training_generator = DataGenerator(train_ids, 32,(60,8,8))
+val_generator = DataGenerator(val_ids, 32,(60,8,8))
+
+history = model.fit_generator(generator=training_generator,validation_data=val_generator,epochs=5)
+model.save('models\\BughouseNet220620190437.h5')
+plotHistory(history)
+
+# with open('dataset/' + str(0) + '.pkl','rb') as pkl_file:
+#     rl_datapoint = pickle.load(pkl_file)
+#     print(rl_datapoint.policy.shape)
+#     print(rl_datapoint.values.shape)
