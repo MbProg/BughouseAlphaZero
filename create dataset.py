@@ -129,13 +129,15 @@ def create_states_from_moves(moves, time, row, line, outputfile, value_and_polic
             policy = np.zeros(constants.NB_LABELS)
             str_policies = np.array(constants.LABELS)
             policy[np.where(np.isin(str_policies, uci_move))] = 1.
-            rl_datapoint = RL_Datapoint(bughouseEnv.get_state(), policy, value)
+            rl_datapoint = RL_Datapoint(bughouseEnv.get_state().matrice_stack, policy, value)
 
             with open('dataset/' + str(ID) + '.pkl', 'wb') as output_file:
                 # pickle.dump(bughouseEnv.get_state(), output_file, pickle.HIGHEST_PROTOCOL)
                 pickle.dump(rl_datapoint, output_file, pickle.HIGHEST_PROTOCOL)
                 output_file.close()
             ID+=1
+            if ID == 100000:
+                return
 
             # rl_datapoint = RL_Datapoint(bughouseEnv.get_state(), value_and_policy_dict[fen_key][1],value_and_policy_dict[fen_key][0] )
 
@@ -179,6 +181,8 @@ def create_dataset(input_file_with_moves, output_file,extension):
                     print('Game nr: ' , games_count)
                 output.close()
 
+        if ID == 100000:
+            return
 
     return value_and_policy_dict
 
