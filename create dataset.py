@@ -250,24 +250,24 @@ value_policy_dict = create_dataset('filtered_dataset_small.csv', r'dataset\bugho
 # import os 
 # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
-from bughouse.keras.NNet import NNetWrapper as nn
-from bughouse.BugHouseGame import BugHouseGame as Game
-g = Game()
-nnet = nn(g)
-for i in range (0,23):
+# from bughouse.keras.NNet import NNetWrapper as nn
+# from bughouse.BugHouseGame import BugHouseGame as Game
+# g = Game()
+# nnet = nn(g)
+# for i in range (0,23):
 
-    examples = createDataset(r'dataset\bughouse_testset_' + str(i) + '.csv',r'dataset\BACK_value_and_policy_dict_36.pkl')
-    length = len(examples)
-    train_set = examples[:(int(length*0.9))]
-    val_set = examples[(int(length*0.9)):]
-# test_set = examples[(int(length*0.85)):]
-
-
+#     examples = createDataset(r'dataset\bughouse_testset_' + str(i) + '.csv',r'dataset\BACK_value_and_policy_dict_36.pkl')
+#     length = len(examples)
+#     train_set = examples[:(int(length*0.9))]
+#     val_set = examples[(int(length*0.9)):]
+# # test_set = examples[(int(length*0.85)):]
 
 
-    nnet.train(train_set,val_set,'VGG16_'+str(i))
-    if i == 12:
-        break
+
+
+#     nnet.train(train_set,val_set,'VGG16_'+str(i))
+#     if i == 12:
+#         break
 # value_policy_dict = read_value_and_policy_dict(r'dataset\BACK_value_and_policy_dict_1.0.pkl')
 # create_states_from_moves(moves, b, 180)
 
