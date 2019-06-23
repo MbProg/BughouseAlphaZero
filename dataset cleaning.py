@@ -18,7 +18,11 @@ def filter_bpgn_file(bpgn_file, output_file):
             firstround = False
             value_of_curly_bracket = re.search(r'(?<=^{)(\S+)(?:\s)(\S+)', x) #gets the result description in the curly bracket like 'resigned' or 'checkmated'
             if('1A.' in x):
-                cache['moves'] = x
+                if(x.startswith("{")):
+                    moves = re.search(r"\}(.*)", x).group(1)
+                    cache['moves'] = moves
+                else:
+                    cache['moves'] = x
             elif (value_of_curly_bracket):
                 cache["result_description"] = value_of_curly_bracket.group(2)
                 if not cache["result_description"] in list_of_game_outcomes:
@@ -93,5 +97,4 @@ def clean_dataset_from_games_with_just_one_move(input_file, output_file):
                 line += 1
 
 
-# clean_dataset_from_games_with_just_one_move("prefiltered_dataset_2005.csv", "filtered_dataset_small2.csv")
 filter_bpgn_file('export2005.bpgn', 'prefiltered_dataset_2005.csv')
