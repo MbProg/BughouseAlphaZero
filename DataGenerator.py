@@ -131,6 +131,7 @@ import keras.backend as K
 from keras.models import Model
 from keras.layers import Input, Dense, Conv2D, Flatten, BatchNormalization, Activation
 from keras import optimizers
+from keras.callbacks import ModelCheckpoint
 
 CLASSES_LEN = 2272
 channel_pos = 'channels_last'
@@ -143,7 +144,7 @@ x = __VGG_Conv2DBlock(96, (3,3), 'relu', 'same',channel_pos, x, 2)
 # Block 3
 x = __VGG_Conv2DBlock(128, (3,3), 'relu', 'same',channel_pos, x)
 # Block 4
-x = __VGG_Conv2DBlock(190, (3,3), 'relu', 'same',channel_pos, x)
+x = __VGG_Conv2DBlock(160, (3,3), 'relu', 'same',channel_pos, x)
 # Block 5 
 x = __VGG_Conv2DBlock(190, (3,3), 'relu', 'same',channel_pos, x)
 
@@ -154,18 +155,24 @@ value = Dense(1, activation='tanh', name='value')(dense_1)
 policy = Dense(CLASSES_LEN, activation='softmax', name='policy')(dense_1)
 
 model = Model(inp, [policy,value])
-model.compile(loss=['categorical_crossentropy','mean_squared_error'], optimizer=optimizers.RMSprop(0.00001),
+sgd = optimizers.SGD(lr=0.001, momentum=0.9, decay=0.1/5, nesterov=False)
+
+model.compile(loss=['categorical_crossentropy','mean_squared_error'], optimizer=sgd,
               metrics=['accuracy'])
+              
 model.summary()
 
-whole_ids = np.arange(100000)
+whole_ids = np.arange(1133611)
 np.random.shuffle(whole_ids)
 train_ids = whole_ids[:int(len(whole_ids)*0.9)]
 val_ids = whole_ids[int(len(whole_ids)*0.9):]
-training_generator = DataGenerator(train_ids, 32,(60,8,8))
-val_generator = DataGenerator(val_ids, 32,(60,8,8))
+training_generator = DataGenerator(train_ids, 256,(60,8,8))
+val_generator = DataGenerator(val_ids, 256,(60,8,8))
+filepath="model-{epoch:02d}.hdf5"
+checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=False, save_weights_only=False, mode='auto', period=1)
+callbacks_list = [checkpoint]
 
-history = model.fit_generator(generator=training_generator,validation_data=val_generator,epochs=5)
+history = model.fit_generator(generator=training_generator,validation_data=val_generator,epochs=5,callbacks=callbacks_list)
 model.save('models\\BughouseNet220620190437.h5')
 plotHistory(history)
 
