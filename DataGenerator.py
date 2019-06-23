@@ -169,8 +169,14 @@ val_ids = whole_ids[int(len(whole_ids)*0.9):]
 training_generator = DataGenerator(train_ids, 256,(60,8,8))
 val_generator = DataGenerator(val_ids, 256,(60,8,8))
 filepath="model-{epoch:02d}.hdf5"
+
+# callbacks 
+from datetime import datetime
 checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=False, save_weights_only=False, mode='auto', period=1)
-callbacks_list = [checkpoint]
+logdir="logs/scalars/" + datetime.now().strftime("%Y%m%d-%H%M%S")
+tensorboard_callback = keras.callbacks.TensorBoard(log_dir=logdir, update_freq='batch')
+
+callbacks_list = [checkpoint,tensorboard_callback]
 
 history = model.fit_generator(generator=training_generator,validation_data=val_generator,epochs=5,callbacks=callbacks_list)
 model.save('models\\BughouseNet220620190437.h5')
