@@ -137,8 +137,8 @@ def create_states_from_moves(moves, time, row, line, outputfile, value_and_polic
                 pickle.dump(rl_datapoint, output_file, pickle.HIGHEST_PROTOCOL)
                 output_file.close()
             ID+=1
-            if ID == 100000:
-                return
+            # if ID == 100000:
+            #     return
 
             # rl_datapoint = RL_Datapoint(bughouseEnv.get_state(), value_and_policy_dict[fen_key][1],value_and_policy_dict[fen_key][0] )
 
@@ -182,8 +182,8 @@ def create_dataset(input_file_with_moves, output_file,extension):
                     print('Game nr: ' , games_count)
                 output.close()
 
-        if ID == 100000:
-            return
+        # if ID == 100000:
+        #     return
 
     return value_and_policy_dict
 
