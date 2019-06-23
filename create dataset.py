@@ -247,6 +247,8 @@ def createDataset(state_file,value_policy_file):
 # l = read_dataset(r'dataset\0.pkl')
 # print(l)
 value_policy_dict = create_dataset('filtered_dataset_small.csv', r'dataset\bughouse_testset','.csv')
+print('Data preprocessing finished.')
+
 # import os 
 # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
