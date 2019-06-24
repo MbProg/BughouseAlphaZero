@@ -1,6 +1,7 @@
 import chess.variant
 import copy
 import numpy as np
+import copy
 
 class _BughouseBoardState:
     def __init__(self, board):
@@ -39,7 +40,7 @@ class _BughouseBoard(chess.variant.CrazyhouseBoard):
             self._bughouse_boards.boards[self.other_board_id].pockets[pocket].add(piece_type)
 
     def set_fen(self, fen):
-        super(chess.variant.CrazyhouseBoard, self).set_fen(fen)
+        super().set_fen(fen)
 
     def to_numpy(self, flip: bool):
         #order of figurs
@@ -106,7 +107,7 @@ class _BughouseBoard(chess.variant.CrazyhouseBoard):
 
         return piece_mat, pocket_mat, color_mat, movecount_mat, promoted_mat, castling_mat
 
-    def to_numpy_single(self,main_board: bool, main_board_player: bool = chess.WHITE):
+    def to_numpy_single(self, main_board: bool, main_board_player: bool = chess.WHITE):
         #order of figurs
         # Black = 0, White = 1
         # PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING
@@ -119,6 +120,14 @@ class _BughouseBoard(chess.variant.CrazyhouseBoard):
         # Piece postions on the board and promoted pieces
         piece_mat = np.zeros((2, 6, 8, 8))
         promoted_mat = np.zeros((2, 8, 8))  # First White then Black
+
+        # en passent mat
+        en_passent_mat = np.zeros((1, 8, 8))
+        if self.ep_square is not None:
+            row = self.ep_square // 8
+            col = self.ep_square % 8
+            en_passent_mat[0, row, col] = 1
+
         rank = 0
         file = 0
         # check each tile for figures and promotion
@@ -158,15 +167,15 @@ class _BughouseBoard(chess.variant.CrazyhouseBoard):
                 if self.promoted & mask:
                     color = int(bool(self.occupied_co[chess.WHITE] & mask)and not curr_player)
                     promoted_mat[color, rank, file]
-
-            # Flip the positions for Black player
-            file  += 1
+            file += 1
             if file >= 8:
                 file = 0
                 rank += 1
         if curr_player == chess.BLACK:
             piece_mat = np.flip(np.flip(piece_mat, 2), 3)
             promoted_mat = np.flip(np.flip(promoted_mat, 1), 2)
+            en_passent_mat = np.flip(np.flip(en_passent_mat, 1), 2)
+
         piece_mat = np.concatenate(piece_mat, axis=0)
         # Get Pockets
         normalization = 8.0  # max number of pawns
@@ -180,7 +189,7 @@ class _BughouseBoard(chess.variant.CrazyhouseBoard):
 
         #check castling rights
         castling_mat = self.get_castling_mat(curr_player)
-        return piece_mat, pocket_mat, color_mat, movecount_mat, promoted_mat, castling_mat
+        return piece_mat, pocket_mat, color_mat, movecount_mat, promoted_mat, castling_mat#ToDo, en_passent_mat
 
     def get_pockets_numpy(self, normalization = 8, player: bool = False):
         # oder of Pocket LEFT, RIGHT
@@ -281,7 +290,6 @@ class BughouseBoards:
 
     def __init__(self, fen=starting_fen, chess960=False):
         self.boards = [_BughouseBoard(self, 1, fen[0]),_BughouseBoard(self, 0, fen[1])]
-        self.fen = fen
 
     def reset_boards(self):
         for board in self.boards:
@@ -328,9 +336,15 @@ class BughouseBoards:
     def get_pockets(self):
         return self.boards[self.LEFT].pockets.copy(), self.boards[self.RIGHT].pockets.copy()
 
-    def board_fen(self, promoted=None):
-        fen = [self.boards[0].board_fen(), self.boards[1].board_fen()]
+    def fen(self, promoted:bool =None):
+        f = self.boards[0].fen()
+        fen = [self.boards[0].fen(), self.boards[1].fen()]
+        #ToDo add board_fen = [fen[0].split(" ", 1)[0], fen[1].split(" ", 1)[0]] for history
         return fen
+
+    def board_fen(self, promoted=None):
+        board_fen = [self.boards[0].board_fen(), self.boards[1].board_fen()]
+        return board_fen
 
     def is_checkmate(self) -> bool:
         return self.boards[self.LEFT].is_checkmate() or self.boards[self.RIGHT].is_checkmate()
@@ -369,16 +383,6 @@ class BughouseBoards:
     def generate_legal_moves(self, board):
         return self.boards[board].generate_legal_moves()
 
-    # def to_numpy(self, flip: bool):
-    #     # Flip to get both player on the same side
-    #     piece_mat_l, pocket_mat_l, player_mat_l, movecount_mat_l, promoted_mat_l, castling_mat_l =\
-    #         self.boards[0].to_numpy(False)
-    #     piece_mat_r, pocket_mat_r, player_mat_r, movecount_mat_r, promoted_mat_r, castling_mat_r = \
-    #         self.boards[0].to_numpy(False)
-    #     return np.array([piece_mat_l, piece_mat_r+1]), np.array([pocket_mat_l, pocket_mat_r+1]), \
-    #            np.array([player_mat_l, player_mat_r+1]), np.array([movecount_mat_l, movecount_mat_r+1]), \
-    #            np.array([promoted_mat_l, promoted_mat_r+1]),np.array([castling_mat_l, castling_mat_r+1])
-
     def to_numpy(self, board : int):
         # Flip to get both player on the same side
         # main board
@@ -394,6 +398,28 @@ class BughouseBoards:
     def to_numpy_simplified(self, flip: bool):
         return np.concatenate((self.boards[0].to_numpy_simplified(False), self.boards[1].to_numpy_simplified(flip)),
                               axis=1)
+    def __copy__(self):
+        newone = type(self)()
+        newone.boards = self.boards.copy()
+        return newone
+
+    def __deepcopy__(self, memodict={}):
+        newone = type(self)()
+        for i in range(2):
+            newone.boards[i].pawns = self.boards[i].pawns
+            newone.boards[i].knights = self.boards[i].knights
+            newone.boards[i].bishops = self.boards[i].bishops
+            newone.boards[i].rooks = self.boards[i].rooks
+            newone.boards[i].queens = self.boards[i].queens
+            newone.boards[i].kings = self.boards[i].kings
+
+            newone.boards[i].occupied_co[chess.WHITE] = self.boards[i].occupied_co[chess.WHITE]
+            newone.boards[i].occupied_co[chess.BLACK] = self.boards[i].occupied_co[chess.BLACK]
+            newone.boards[i].occupied = self.boards[i].occupied
+            newone.boards[i].promoted = self.boards[i].promoted
+            newone.boards[i].pockets[chess.WHITE] = self.boards[i].pockets[chess.WHITE].copy()
+            newone.boards[i].pockets[chess.BLACK] = self.boards[i].pockets[chess.BLACK].copy()
+        return newone
 
     # def get_pockets_numpy(self, create_mat:bool = True):
     #     # oder of Pocket LEFT, RIGHT
