@@ -5,15 +5,17 @@ sys.path.append('..')
 from Game import Game
 import bughouse.constants as constants
 from bughouse.BughouseEnv import BughouseEnv
+
+
 class BugHouseGame(Game):
     # we although in the base class everything works with board and we inherit the names
     # but we are using state instead of board
     def __init__(self):
         Game.__init__(self)
-        self.agent = BughouseEnv(0, 0)
+        self.environment = BughouseEnv(0, 0)
 
     def getInitBoard(self):
-        state = self.agent.get_state()
+        state = self.environment.get_board_state()
         return state
 
     def getBoardSize(self):
@@ -30,26 +32,25 @@ class BugHouseGame(Game):
             if elem == actionString:
                 return counter
 
-    def getNextState(self,state,player,action):
-        copyAgent = BughouseEnv(0,0)
-        copyAgent.load_state(state)
-        copyAgent(constants.LABELS[action])
+    def getNextState(self, player, action, state = None):
+        if state is not None:
+            self.environment.load_state(state)
+        state = self.environment(constants.LABELS[action])
         # print(f'{action}: {constants.LABELS[action]}')
-        return copyAgent.get_state(),-player
+        return state, -player
+
+    def setState(self, state):
+        self.environment.load_state(state)
 
     def getValidMoves(self, state, player):
         
         "Any zero value in top row in a valid move"
-        copyAgent = BughouseEnv(0,0)
-        copyAgent.load_state(state)
-        return np.array(list(copyAgent.get_legal_moves_dict().values()))
+        return np.array(list(self.environment.get_legal_moves_dict().values()))
 
     def getGameEnded(self, state, player):
-        copyAgent = BughouseEnv(0,0)
-        copyAgent.load_state(state)
-        finished = copyAgent.game_finished()
+        finished = self.environment.game_finished()
         if finished:
-            score = copyAgent.get_score()
+            score = self.environment.get_score()
             if score == 0:
                 # draw has very little value.
                 return 1e-4
@@ -64,8 +65,6 @@ class BugHouseGame(Game):
     
 
     def getCanonicalForm(self, state, player):
-        # copyAgent = BugHouseEnv(0,0)
-        # copyAgent.load_state(state)
         return state    
 
     def getSymmetries(self, state, pi):
@@ -73,7 +72,7 @@ class BugHouseGame(Game):
         return [(state.board, pi)]
 
     def stringRepresentation(self, state):
-        return str(' '.join(state._boards_fen) + ' ' +  ('w' if state.player else 'b'))
+        return str(' '.join(state._fen))
 
 def printBughouse(agent):
     builder = []

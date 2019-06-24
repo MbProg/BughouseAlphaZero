@@ -107,7 +107,7 @@ class BugHouseArena(Arena):
         if valids[actionNumber] == 0:
             print(actionNumber)
             assert valids[actionNumber] > 0
-        state, curPlayer = self.game.getNextState(state, curPlayer, actionNumber)
+        state, curPlayer = self.game.getNextState(curPlayer, actionNumber, state)
 
         return state, curPlayer,actionString
 
@@ -131,7 +131,12 @@ class BugHouseArena(Arena):
                 assert(self.display)
                 print("Turn ", str(it), "Player ", str(curPlayer))
                 self.display(state)
-            action = np.argmax(self.mcts.getActionProb(state,temp=0))
+            self.mcts.startMCTS(state, depth=1)
+            while self.mcts.has_finished():
+                time.sleep(0.01)
+                pass
+            action = np.argmax(self.mcts.stopMCTS(temp=0))
+            #action = np.argmax(self.mcts.getActionProb_seq(state, temp=0))
             # action = players[curPlayer+1](self.game.getCanonicalForm(state, curPlayer))
 
             valids = self.game.getValidMoves(self.game.getCanonicalForm(state, curPlayer),1)
@@ -139,8 +144,8 @@ class BugHouseArena(Arena):
             if valids[action]==0:
                 print(action)
                 assert valids[action] >0
-            state, curPlayer = self.game.getNextState(state, curPlayer, action)
-            print(state._boards_fen[0])
+            state, curPlayer = self.game.getNextState(curPlayer, action, state)
+            print(state._fen[0])
         if verbose:
             assert(self.display)
             print("Game over: Turn ", str(it), "Result ", str(self.game.getGameEnded(state, 1)))
