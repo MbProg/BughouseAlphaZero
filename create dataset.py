@@ -4,6 +4,8 @@ import re
 from bughouse.BughouseEnv import BughouseEnv
 import csv
 import pickle
+import zarr
+import os
 
 # b = BughouseEnv(0, 0)
 # l = b.get_state()._boards_fen
@@ -20,16 +22,44 @@ import pickle
 # moves = "1A. e4{179.015} 1B. e4{178.938} 1a. Nf6{179.656} 2A. e5{178.515} 1b. e5{178.594} 2B. Nf3{178.518} 2b. Bc5{178.281} 2a. Ne4{177.640} 3B. d4{177.967} 3b. exd4{177.062} 3A. Qe2{176.843} 4B. Nxd4{177.776} 4b. Bxd4{176.797} 5B. Qxd4{177.395} 3a. d5{176.265} 4A. d3{176.077} 5b. Nf6{175.625} 6B. Nc3{177.074} 6b. Nc6{175.078} 7B. Qd1{176.413} 7b. O-O{173.734} 4a. Nxf2{171.874} 5A. Qxf2{175.546} 8B. P@h6{174.601} 5a. e6{170.124} 6A. Qxf7+{174.061} 8b. N@e6{170.390} 6a. Kxf7{168.952} 9B. hxg7{174.161} 7A. N@g5+{173.961} 9b. Nxg7{169.500} 7a. Qxg5{168.171} 8A. Bxg5{173.861} 8a. P@f2+{167.140} 10B. Bh6{171.307} 9A. Kxf2{172.799} 9a. B@e7{166.499} 10b. Nfh5{166.719} 10A. P@f6{170.846} 10a. Bc5+{164.171} 11A. P@e3{169.002} 11a. d4{162.311} 11B. N@f5{163.485} 12A. e4{167.237} 12a. P@e3+{160.046} 11b. Nxf5{162.828} 13A. Ke1{166.440} 12B. exf5{162.794} 12b. P@d2+{161.110} 13B. Bxd2{160.971} 13b. Qe7+{158.766} 13a. P@f2+{152.014} 14A. Ke2{165.065} 14a. fxg1=Q{149.061} 15A. Rxg1{164.965} 14B. Q@e3{154.622} 15a. Nc6{127.592} 16A. fxg7{163.136} 16a. Bxg7{127.045} 17A. Bf4{159.917} 17a. Rf8{121.248} 18A. N@g5+{158.245} 18a. Kg8{120.529} 19A. Nh3{154.698} 14b. Qxe3+{114.609} 19a. Nxe5{115.154} 15B. Bxe3{153.450} 20A. Q@g3{149.526} 15b. Re8{106.202} 16B. Qxh5{151.998} 16b. Rxe3+{104.936} 17B. fxe3{151.537} 17b. P@f2+{103.233} 18B. Kxf2{149.795} 18b. Q@d2+{93.170} 19B. Qe2{145.439} 20a. P@g4{85.810} 19b. Qxe2+{88.858} 20B. Bxe2{143.806} 20b. P@g7{87.451} 21A. Kd1{135.557} 21B. P@h6{132.680} 21b. d5{79.091} 21a. N@h5{74.888} 22B. hxg7{130.286} 22b. Kxg7{75.997} 22A. Bxe5{129.261} 23B. N@h5+{128.053} 23b. Kg8{75.262} 22a. Nxg3{72.341} 24B. Q@g7#{126.511}"
 # moves = '1A. Qe7+{118.979} 1B. Nf3{116.510} 1a. Be3{115.283} 1b. exd4{117.312} 2A. Bxc3+{118.879} 2a. bxc3{114.627} 2B. Nxd4{115.620} 3A. Bg4{118.028} 2b. Nc6{116.234} 3a. P@e5{113.846} 3B. Nxc6{114.167} 4A. P@e4{116.686} 3b. bxc6{116.134} 4B. Nc3{114.011} 4a. Rg1{112.424} 5A. exf3{115.695} 4b. Bc5{114.338} 5a. gxf3{111.815} 6A. Bxf3{114.773} 6a. Qxf3{110.924} 5B. P@d4{111.479} 7A. fxe5{114.493} 5b. Bb4{113.479} 7a. N@f5{109.987} 8A. Qd7{113.061} 6B. N@e5{109.744} 8a. Nxg7+{108.940} 9A. Kd8{112.721} 6b. N@e4{110.870} 9a. Bg5+{106.971} 7B. Nxf7{108.525} 10A. Kc8{111.930} 7b. Nxc3{109.542} 8B. bxc3{107.228} 10a. N@c5{103.596} 8b. Bxc3+{108.448} 9B. Bd2{106.150} 11A. e4{108.795} 9b. Bxd4{106.666} 10B. e3{102.837} 11a. Nxd7{98.643} 12A. exf3{107.513} 10b. Qf6{103.509} 12a. Nc5{95.284} 11B. Nxh8{94.259} 13A. P@d7{101.144} 13a. P@a6{94.018} 11b. Qxf2+{101.837} 12B. Kxf2{94.159} 14A. Rb8{99.602} 14a. axb7+{90.940} 15A. Rxb7{98.971} 12b. B@h4+{95.103} 15a. P@a6{88.877} 13B. P@g3{92.612} 16A. R@b1+{96.868} 16a. Bc1{85.581} 13b. P@f7{84.228} 14B. P@g6{88.956} 14b. hxg6{82.338} 17A. Rxa1{83.289} 17a. axb7+{84.316} 15B. P@h7{86.940} 18A. Kb8{82.057} 15b. Nf6{75.525} 18a. Nxd7+{66.003} 19A. Kxb7{81.226} 19a. Nc5+{65.706} 20A. Kb8{80.835} 16B. Qf3{70.550} 20a. Na6+{64.191} 21A. Ka8{80.034} 21a. P@b7+{62.800} 22A. Kxb7{79.683} 22a. Nc5+{62.503} 23A. Kb8{79.162} 23a. Na6+{61.112} 16b. R@f8{68.962} 24A. Ka8{78.290} 24a. P@b7+{59.831} 25A. Kxb7{77.799} 25a. Nc5+{59.238} 26A. Kb8{77.508}'
 # print(b.get_state()._boards_fen)
+import zarr
+from numcodecs import Blosc
 
 class RL_Datapoint():
-    def __init__(self, state, policy, values):
+    def __init__(self, state, policy, value):
         self.state = state
         self.policy = policy
-        self.values = values
+        self.value = value
+
+    def zip_data(self, filepath, cname='lz4', clevel=4):
+        compressor = Blosc(cname=cname, clevel=clevel, shuffle=Blosc.BITSHUFFLE)
+        store = zarr.ZipStore(filepath, mode="w")
+        zarr_file = zarr.group(store=store, overwrite=True)
+        zarr_file.create_dataset(
+            name="state",
+            data=self.state,
+            shape=self.state.shape,
+            dtype=np.float64,
+            chunks=(self.state.shape[0], self.state.shape[1], self.state.shape[2]),
+            synchronizer=zarr.ThreadSynchronizer(),
+            compression=compressor,)
+        zarr_file.create_dataset(
+            name="policy",
+            data=self.policy,
+            shape=self.policy.shape,
+            dtype=np.float64,
+            chunks=( self.policy.shape[0]),
+            synchronizer=zarr.ThreadSynchronizer(),
+            compression=compressor,
+        )
+        zarr_file.create_dataset(
+            name="value", shape=[1,1],chunks=(1,1), dtype=np.float64, data=np.array(self.value).reshape((1,1)), synchronizer=zarr.ThreadSynchronizer()
+        )        
+        store.close()
 
 ID = 0
 # @param outcome: the result of the game. 0 means that team 1 won and team 2 lost, 1 means that team 1 lost and team 2 won
-def create_states_from_moves(moves, time, row, line, outputfile, value_and_policy_dict, outcome, looser):
+def create_states_from_moves(moves, time, row, line, value_and_policy_dict, outcome, looser, outputdirectory = 'dataset/'):
     # bughouseEnv.reset()  # reset the object, to reuse it
     # set the initial time for every player
     global ID
@@ -131,11 +161,11 @@ def create_states_from_moves(moves, time, row, line, outputfile, value_and_polic
             str_policies = np.array(constants.LABELS)
             policy[np.where(np.isin(str_policies, uci_move))] = 1.
             rl_datapoint = RL_Datapoint(bughouseEnv.get_state().matrice_stack, policy, value)
-
-            with open('dataset/' + str(ID) + '.pkl', 'wb') as output_file:
-                # pickle.dump(bughouseEnv.get_state(), output_file, pickle.HIGHEST_PROTOCOL)
-                pickle.dump(rl_datapoint, output_file, pickle.HIGHEST_PROTOCOL)
-                output_file.close()
+            rl_datapoint.zip_data(outputdirectory + str(ID) + '.zip')
+            # with open(outputdirectory + str(ID) + '.pkl', 'wb') as output_file:
+            #     # pickle.dump(bughouseEnv.get_state(), output_file, pickle.HIGHEST_PROTOCOL)
+            #     pickle.dump(rl_datapoint, output_file, pickle.HIGHEST_PROTOCOL)
+            #     output_file.close()
             ID+=1
             # if ID == 100000:
             #     return
@@ -147,26 +177,21 @@ def create_states_from_moves(moves, time, row, line, outputfile, value_and_polic
             #     pickle.dump(rl_datapoint, output_file, pickle.HIGHEST_PROTOCOL)
             #     output_file.close()
     return value_and_policy_dict
-def create_dataset(input_file_with_moves, output_file,extension):
+def create_dataset(input_file_with_moves, outputdirectory = 'dataset/'):
     line = 0
     value_and_policy_dict = {}
-    counter = 0
-    state_output_file = ''
     save_step = 1000
     games_count= 0
-    with open(input_file_with_moves) as csv_file:
+
+    if not os.path.exists(outputdirectory):
+        os.makedirs(outputdirectory)
+        print("The dataset directory was created at: %s", outputdirectory)
+
+    with open(input_file_with_moves, encoding='latin-1') as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
         for row in csv_reader:
-
             # save every thousand rows in one file
             # also the policy and value should be saved in a seperate file 
-            if counter%save_step == 0:
-                print(counter)
-                state_output_file = output_file + '_' + str(int(counter/save_step)) + extension 
-                print(state_output_file)
-                # make backup of 'value_and_policy_dict.pkl'
-                # __save_value_and_policy(r'dataset\BACK_value_and_policy_dict_' + str(int(counter/save_step)) +'.pkl',value_and_policy_dict)
-            counter +=1
             if not row or (row[0] in (None, "")):  # checks if row is empty
                 line += 1
             else:
@@ -175,17 +200,15 @@ def create_dataset(input_file_with_moves, output_file,extension):
                 b = BughouseEnv()
                 outcome = row[2]
                 looser = row[3]
-                value_and_policy_dict = create_states_from_moves(moves, row[0], row, line, state_output_file, value_and_policy_dict, outcome, looser)
-                with open(state_output_file, 'ab') as output:  # save an empty string object in between each game
-                    pickle.dump('', output, pickle.HIGHEST_PROTOCOL)
-                    games_count+=1
-                    print('Game nr: ' , games_count)
-                output.close()
-
+                value_and_policy_dict = create_states_from_moves(moves, row[0], row, line, value_and_policy_dict, outcome, looser, outputdirectory)
+                games_count+=1
+                print(games_count)
         # if ID == 100000:
         #     return
 
     return value_and_policy_dict
+
+
 
 def __save_value_and_policy(outputfile, value_and_policy_dict):
     f = open(outputfile,'wb')
@@ -201,6 +224,11 @@ def read_dataset(state_file):
             except EOFError:
                 break
     return list_of_objects
+
+def load_zip(filepath):
+    dataset = zarr.group(store=zarr.ZipStore(filepath, mode="r"))
+    rl = RL_Datapoint(np.array(dataset['state']),np.array(dataset['policy']),np.array(dataset['value'])[0][0])
+    return rl
 
 def read_value_and_policy_dict(file = 'value_and_policy_dict.pkl'):
     list_of_objects = []
@@ -243,10 +271,10 @@ def createDataset(state_file,value_policy_file):
         if counter == 10:
             break
     return examples
-
+# pl = load_zip('dataset/0.zip')
 # l = read_dataset(r'dataset\0.pkl')
 # print(l)
-value_policy_dict = create_dataset('filtered_dataset_small.csv', r'dataset\bughouse_testset','.csv')
+value_policy_dict = create_dataset('filtered_dataset_2017.csv','dataset/')
 print('Data preprocessing finished.')
 
 # import os 
