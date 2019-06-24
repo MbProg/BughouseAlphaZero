@@ -101,7 +101,7 @@ def create_states_from_moves(moves, time, row, line, value_and_policy_dict, outc
             time = float(move)
 
             #update value_and_policy dictionary
-            fen_key = bughouseEnv.get_state()._boards_fen
+            fen_key = bughouseEnv.get_state()._fen
             fen_key.append(str(team_number))
             fen_key.append(str(board_number))
             fen_key = ' '.join(fen_key)
@@ -274,7 +274,7 @@ def createDataset(state_file,value_policy_file):
 # pl = load_zip('dataset/0.zip')
 # l = read_dataset(r'dataset\0.pkl')
 # print(l)
-value_policy_dict = create_dataset('filtered_dataset_2017.csv','dataset/')
+value_policy_dict = create_dataset('filtered_dataset_small.csv','data/')
 print('Data preprocessing finished.')
 
 # import os 
