@@ -6,7 +6,7 @@ import bughouse.constants as constants
 
 
 class BughouseState(object):
-    def __init__(self, matrices, time, team, board, _player, _pockets_left, _pockets_right, _boards_fen):
+    def __init__(self, matrices, time, team, board, _boards_fen):
         # old state
         # self.player = player # Player that is allowed to move next
         # self.board = board
@@ -18,10 +18,7 @@ class BughouseState(object):
         self.time_remaining = time
         self.team = team
         self.board = board
-        self._player_color = _player
-        self._pockets_left =_pockets_left
-        self._pockets_right = _pockets_right
-        self._boards_fen = _boards_fen
+        self._fen = _boards_fen
         #self.communation = []# ToDo
 
 
@@ -55,28 +52,33 @@ class BughouseEnv():
     def load_state(self, state : BughouseState):
         self.boards.reset_boards()
         self.time_remaining = state.time_remaining
-        self.boards.set_fen(state._boards_fen)
-        self.boards.boards[self.board].turn = state._player_color
-        self.boards.set_pockets(state._pockets_left,state._pockets_right)
+        self.boards.set_fen(state._fen)
 
     def propapagete_board(self, action) -> BughouseState:
         self.push(action, self.team, self.board)  # Execute the action
-        time = self.time_remaining
-        _boards_fen = self.boards.board_fen()
-        _pockets_left, _pockets_right = self.boards.get_pockets()
-        _player_color = self.boards.boards[self.board].turn
-        board = self.last_board_moved
-        team = self.get_team(_player_color, board)
-        return BughouseState(self.boards.to_numpy(self.last_board_moved), time, team, board, _player_color, _pockets_left, _pockets_right, _boards_fen)
+        _fen = self.boards.fen()
+        player_color = self.boards.boards[self.board].turn
+        board = self.board
+        time = self.flip_time(board)
+        team = self.get_team(player_color, board)
+        return BughouseState(self.boards.to_numpy(self.board), time, team, board, _fen)
 
     def get_state(self):
         time = self.time_remaining
-        _boards_fen = self.boards.board_fen()
-        _pockets_left, _pockets_right = self.boards.get_pockets()
-        _player_color = self.boards.boards[self.board].turn
+        _fen = self.boards.fen()
         board = self.last_board_moved
-        team = self.get_team(_player_color, board)
-        return BughouseState(self.boards.to_numpy(self.last_board_moved), time, team, board, _player_color, _pockets_left, _pockets_right, _boards_fen)
+        time = self.flip_time(board)
+        player_color = self.boards.boards[board].turn
+        team = self.get_team(player_color, board)
+        return BughouseState(self.boards.to_numpy(board), time, team, board, _fen)
+
+    def get_board_state(self):
+        _fen = self.boards.fen()
+        player_color = self.boards.boards[self.board].turn
+        board = self.last_board_moved
+        time = self.flip_time(board)
+        team = self.get_team(player_color, board)
+        return BughouseState(self.boards.to_numpy(self.board), time, team, board, _fen)
 
     def game_finished(self):
         """
@@ -173,4 +175,18 @@ class BughouseEnv():
 
     def get_team(self,player_color, board):
         return player_color == board
+
+    def flip_time(self, board):
+        #  Truns the time representation so that the active player is at the bottom left
+        time_remaining = np.zeros((2, 2)) # (Teams, Boards)
+        player_color = self.boards.boards[self.board].turn
+        team = self.get_team(player_color, board)
+        # My board
+        time_remaining[0, 0] = time_remaining[int(team), int(board)]
+        time_remaining[1, 0] = time_remaining[int(not team), int(board)]
+        # Partner board
+        time_remaining[0, 1] = time_remaining[int(team), int(not board)]
+        time_remaining[1, 1] = time_remaining[int(not team), int(not board)]
+
+
 
