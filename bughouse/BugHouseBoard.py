@@ -350,19 +350,15 @@ class BughouseBoards:
         return self.boards[self.LEFT].is_checkmate() or self.boards[self.RIGHT].is_checkmate()
 
     def is_game_over(self) -> bool:
-        return not (any(True for _ in self.boards[self.LEFT].legal_moves) or
-                    any(True for _ in self.boards[self.RIGHT].legal_moves))
-
-    def is_threefold_repetition(self):
-        return self.boards[self.LEFT].is_repetition(3) and self.boards[self.RIGHT].is_repetition(3)
+        return self.is_checkmate() or not (any(True for _ in self.boards[self.LEFT].legal_moves)
+                                           or any(True for _ in self.boards[self.RIGHT].legal_moves))
 
     def result(self):
         # ToDo check win conditions
         # the returned arrays constist of [Left Board, Right Board, Game has ended]
         # score of 1 means White wins, -1 means Black wins and 0 is a draw
         # Check external influnce like time or withdraw
-        if self.boards[self.LEFT].finished or self.boards[self.RIGHT].finished:
-            return np.asarray([self.boards[self.LEFT].score, self.boards[self.RIGHT].score, 1])
+
         # Checkmate
         if self.is_checkmate():
             if self.boards[self.LEFT].is_checkmate():
