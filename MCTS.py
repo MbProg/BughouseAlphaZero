@@ -152,7 +152,7 @@ class MCTS():
         moves, value = self.nnet.predict(canonicalBoard)
         self.data.lock.release()
         # ToDo a good formula for time
-        time = 10
+        time = 0.5
         return time
 
     def has_finished(self):

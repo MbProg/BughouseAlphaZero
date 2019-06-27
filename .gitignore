@@ -19,4 +19,5 @@ dataset/
 models/
 filtered_dataset_small - Copy.csv
 data/
+dataBundleCompressed/
 datapkl/

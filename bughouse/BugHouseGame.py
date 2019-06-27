@@ -50,7 +50,7 @@ class BugHouseGame(Game):
     def getGameEnded(self, state, player):
         finished = self.environment.game_finished()
         if finished:
-            score = self.environment.get_score()
+            score = self.environment.get_score()[self.environment.board]
             if score == 0:
                 # draw has very little value.
                 return 1e-4
