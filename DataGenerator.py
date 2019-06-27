@@ -105,6 +105,7 @@ def __VGG_Conv2DBlock( depth, kernelshape, activation, padding,channel_pos, x, c
     ''' 
     channel_pos must be 3, because keras has a problem with channel_first in BatchNormalization which is not fixed yet
     thus use: A = np.moveaxis(A,0,-1) to move the channel axis to the last index
+
     '''
 
     bn_axis = 3
@@ -165,7 +166,7 @@ def __read_file_data(ID, path='dataset/'):
     values = np.array(dataset['values'])
     return X,policies,values
 
-def generator(batch_size, datasetFileLength):
+def generator(batch_size, datasetFileLength, path='dataset/'):
     while True:
         files_sequence = list(range(datasetFileLength))
         np.random.shuffle(files_sequence)
@@ -186,29 +187,8 @@ from keras import optimizers
 from keras.callbacks import ModelCheckpoint
 from keras.layers import *
 
-
-
-# ----------- parameters ----------------
-files_len = 112
-file_ids = np.arange(files_len)
-# np.random.shuffle(file_ids)
-train_ids = file_ids[:int(len(file_ids)*0.9)]
-val_ids = file_ids[int(len(file_ids)*0.9):]
-training_generator = DataGenerator(train_ids,1000, 128,(60,8,8))
-val_generator = DataGenerator(val_ids,1000, 128,(60,8,8))
-
-filepath="models/model-{epoch:02d}.hdf5"
-zip_length = 10000
-data_len = 112 * zip_length
-batch_size = 256
-steps_per_epoch = int((len(train_ids)*zip_length)/batch_size)
-CLASSES_LEN = 2272
-channel_pos = 'channels_last'
-inp_shape = (60,8,8) # TODO: this should be read from the environment
-
-# ----------- NN Architecture ----------------
 def getResidualNetwork(input_shape):
-
+    
     channel_pos = 'channels_first'
     inp_shape = Input(input_shape,name='input1')
     x = Conv2D(256, kernel_size=(3,3), padding = 'same', input_shape=input_shape,data_format=channel_pos,name='conv2d_1')(inp_shape)
@@ -291,34 +271,26 @@ def getResidualNetwork(input_shape):
     model.summary()
     return model
 
+# ----------- parameters ----------------
+files_len = 10
+file_ids = np.arange(files_len)
+# np.random.shuffle(file_ids)
+train_ids = file_ids[:int(len(file_ids)*0.9)]
+val_ids = file_ids[int(len(file_ids)*0.9):]
+# training_generator = DataGenerator(train_ids,1000, 128,(60,8,8),path='dataset')
+# val_generator = DataGenerator(val_ids,1000, 128,(60,8,8))
 
+filepath="models/model-{epoch:02d}.hdf5"
+zip_length = 10000
+data_len = files_len * zip_length
+batch_size = 256
+steps_per_epoch = int((len(train_ids)*zip_length)/batch_size)
+CLASSES_LEN = 2272
+channel_pos = 'channels_last'
+dataset_path = 'dataset/'
+inp_shape = (60,8,8) # TODO: this should be read from the environment
 
-    
-class LossHistory(keras.callbacks.Callback):
-    def on_train_begin(self, logs={}):
-        self.losses ={1,1}
-        print('lr: ', self.model.optimizer.lr)
-    
-    def on_batch_end(self, batch, logs={}):
-        self.model.optimizer.lr = self.getLearningRate(batch,steps_per_epoch ,self.model.optimizer.lr)
-        if (batch%5==0):
-            print('batch: ', batch, ' - lr: ', self.model.optimizer.lr)
-
-    def getLearningRate(self, batch, batches_len, lr):
-        '''
-        start by very small
-        the first 10% a slope of 3
-        the next 10% a slope of -3
-        the rest a slop of -0.1
-        '''
-        print('lr: ', lr)
-        percent = batch/batches_len
-        if percent<=0.1:
-            lr += lr*3
-        elif percent>0.1 and percent<0.2:
-            lr +=lr*(-3)
-        else:
-            lr += lr*0.1
+# ----------- NN Architecture ----------------
 
 # inp = Input(inp_shape)
 # # Block 1
@@ -340,7 +312,7 @@ class LossHistory(keras.callbacks.Callback):
 
 # model = Model(inp, [policy,value])
 model = getResidualNetwork(inp_shape)
-sgd = optimizers.SGD(lr=0.001, momentum=0.9, decay=0.1/5, nesterov=False)
+sgd = optimizers.SGD(lr=0.000, momentum=0.9, decay=0.1/5, nesterov=False)
 
 def acc_reg(y_true,y_pred):
     return K.constant(1) - K.square(K.mean((y_pred-y_true), axis=1))
@@ -354,7 +326,7 @@ model.compile(loss=['categorical_crossentropy','mean_squared_error'], optimizer=
 
 #
 val_id = files_len -1 
-x_val, policies_val, values_val = __read_file_data(val_id)
+x_val, policies_val, values_val = __read_file_data(val_id,path=dataset_path)
     
 # callbacks 
 from datetime import datetime
@@ -362,13 +334,25 @@ checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_
 logdir="logs/scalars/" + datetime.now().strftime("%Y%m%d-%H%M%S")
 tensorboard_callback = keras.callbacks.TensorBoard(log_dir=logdir, update_freq='batch')
 
+# learning rate
+from  LearningRateScheduler import *
+epochs = 20
+batch_len = epochs * int(data_len/ (batch_size))
+max_lr = 0.001*8
+total_it = batch_len
+min_lr = 0.0001
+print('BatchLen: ', batch_len, ' - DataLen: ', data_len)
+lr_schedule = OneCycleSchedule(start_lr=max_lr/8, max_lr=max_lr, cycle_length=total_it*.4, cooldown_length=total_it*.6, finish_lr=min_lr)
+scheduler = LinearWarmUp(lr_schedule, start_lr=min_lr, length=total_it/30)
+bt = BatchLearningRateScheduler(scheduler)
+
 # losshistory = LossHistory()
-callbacks_list = [checkpoint,tensorboard_callback]
+callbacks_list = [checkpoint,tensorboard_callback,bt]
 # callbacks_list = [checkpoint]
 model.load_weights('models/model-05.hdf5')
 # history = model.fit_generator(generator=training_generator,validation_data=val_generator,epochs=5,callbacks=callbacks_list)
-history = model.fit_generator(generator(batch_size,len(train_ids)), steps_per_epoch=int((len(train_ids)*zip_length)/batch_size), callbacks=callbacks_list,
-                    epochs=5, validation_data=(x_val, [policies_val,values_val]))
+history = model.fit_generator(generator(batch_size,len(train_ids),path=dataset_path), steps_per_epoch=int((len(train_ids)*zip_length)/batch_size), callbacks=callbacks_list,
+                    epochs=epochs, validation_data=(x_val, [policies_val,values_val]))
 model.save('models\\BughouseNet220620190437.h5')
 plotHistory(history)
 

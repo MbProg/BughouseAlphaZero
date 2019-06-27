@@ -126,25 +126,25 @@ class BatchLearningRateScheduler(Callback):
 
 
         
-import matplotlib.pyplot as plt
-def plot_schedule(schedule_fn, iterations=1500):
-    # Iteration count starting at 1
-    iterations = [i+1 for i in range(iterations)]
-    lrs = [schedule_fn(i) for i in iterations]
-    plt.scatter(iterations, lrs)
-    plt.xlabel("Iteration")
-    plt.ylabel("Learning Rate")
-    plt.show()
-import numpy as np
-epochs = 5
-batch_size = 64
-X_train = np.empty(10000)
-batch_len = epochs * int(len(X_train) / (batch_size))
-max_lr = 0.1
-total_it = batch_len
-min_lr = 0.01
-lr_schedule = OneCycleSchedule(start_lr=max_lr/8, max_lr=max_lr, cycle_length=total_it*.4, cooldown_length=total_it*.6, finish_lr=min_lr)
-scheduler = LinearWarmUp(lr_schedule, start_lr=min_lr, length=total_it/30)
-bt = BatchLearningRateScheduler(scheduler)
-plot_schedule(lr_schedule, iterations=total_it)
+# import matplotlib.pyplot as plt
+# def plot_schedule(schedule_fn, iterations=1500):
+#     # Iteration count starting at 1
+#     iterations = [i+1 for i in range(iterations)]
+#     lrs = [schedule_fn(i) for i in iterations]
+#     plt.scatter(iterations, lrs)
+#     plt.xlabel("Iteration")
+#     plt.ylabel("Learning Rate")
+#     plt.show()
+# import numpy as np
+# epochs = 5
+# batch_size = 64
+# X_train = np.empty(10000)
+# batch_len = epochs * int(len(X_train) / (batch_size))
+# max_lr = 0.1
+# total_it = batch_len
+# min_lr = 0.01
+# lr_schedule = OneCycleSchedule(start_lr=max_lr/8, max_lr=max_lr, cycle_length=total_it*.4, cooldown_length=total_it*.6, finish_lr=min_lr)
+# scheduler = LinearWarmUp(lr_schedule, start_lr=min_lr, length=total_it/30)
+# bt = BatchLearningRateScheduler(scheduler)
+# plot_schedule(lr_schedule, iterations=total_it)
 
