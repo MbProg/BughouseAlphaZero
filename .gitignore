@@ -18,3 +18,5 @@ bughouse_testset.csv
 dataset/
 models/
 filtered_dataset_small - Copy.csv
+data/
+datapkl/

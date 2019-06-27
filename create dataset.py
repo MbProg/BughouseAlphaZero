@@ -6,7 +6,7 @@ import csv
 import pickle
 import zarr
 import os
-
+import datetime
 # b = BughouseEnv(0, 0)
 # l = b.get_state()._boards_fen
 # l.append(str(1))
@@ -56,10 +56,89 @@ class RL_Datapoint():
             name="value", shape=[1,1],chunks=(1,1), dtype=np.float64, data=np.array(self.value).reshape((1,1)), synchronizer=zarr.ThreadSynchronizer()
         )        
         store.close()
+class DatapointSaver():
+    def __init__(self,filedirectory='dataset/',zip_length=1024, state_shape=(60,8,8),policy_shape=(constants.NB_LABELS,),autosave=True, cname='lz4', clevel=4):
+        self.zip_length = zip_length
+        self.X = np.empty((zip_length,state_shape[0],state_shape[1],state_shape[2]))
+        self.policies = np.empty((zip_length,policy_shape[0]))
+        self.values = np.empty((zip_length,1))
+        self.counter = 0
+        self.cname = cname
+        self.clevel = clevel
+        self.filedirectory = filedirectory
+        self.autosave = autosave
+        self.ID = 0
+    
+    def append(self,rl_datapoint):
+        if (self.counter+1==self.zip_length):
+            raise ValueError('Numpy array is filled with data and the limit was exceeded.')
+        self.X[self.counter,] = rl_datapoint.state
+        self.policies[self.counter,] = rl_datapoint.policy
+        self.values[self.counter,] = rl_datapoint.value
+        self.counter +=1
+
+        # save automatically the data
+        if (self.counter+1==self.zip_length) and self.autosave:
+            self._zipData()
+            self.counter = 0
+    
+    def _zipData(self):
+        compressor = Blosc(cname=self.cname, clevel=self.clevel, shuffle=Blosc.BITSHUFFLE)
+        store = zarr.ZipStore(self.filedirectory + str(self.ID) + '.zip', mode="w")
+        zarr_file = zarr.group(store=store, overwrite=True)
+        zarr_file.create_dataset(
+            name="states",
+            data=self.X,
+            shape=self.X.shape,
+            dtype=np.float64,
+            chunks=(self.X.shape[0], self.X.shape[1], self.X.shape[2],self.X.shape[3]),
+            synchronizer=zarr.ThreadSynchronizer(),
+            compression=compressor,)
+        zarr_file.create_dataset(
+            name="policies",
+            data=self.policies,
+            shape=self.policies.shape,
+            dtype=np.int16,
+            chunks=( self.policies.shape[0], self.policies.shape[1]),
+            synchronizer=zarr.ThreadSynchronizer(),
+            compression=compressor,
+        )
+        zarr_file.create_dataset(
+            name="values", shape=self.values.shape,chunks=(self.values.shape[0]), dtype=np.float64, data=self.values, synchronizer=zarr.ThreadSynchronizer()
+        ) 
+        self.ID+=1           
+        store.close()
+        
+def zipData(states, policies,values, filepath, cname='lz4', clevel=4):
+    compressor = Blosc(cname=cname, clevel=clevel, shuffle=Blosc.BITSHUFFLE)
+    store = zarr.ZipStore(filepath, mode="w")
+    zarr_file = zarr.group(store=store, overwrite=True)
+    zarr_file.create_dataset(
+        name="states",
+        data=states,
+        shape=states.shape,
+        dtype=np.float64,
+        chunks=(states.shape[0], states.shape[1], states.shape[2],states.shape[3]),
+        synchronizer=zarr.ThreadSynchronizer(),
+        compression=compressor,)
+    zarr_file.create_dataset(
+        name="policies",
+        data=policies,
+        shape=policies.shape,
+        dtype=np.float64,
+        chunks=( policies.shape[0], policies.shape[1]),
+        synchronizer=zarr.ThreadSynchronizer(),
+        compression=compressor,
+    )
+    zarr_file.create_dataset(
+        name="values", shape=values.shape,chunks=(values.shape[0]), dtype=np.float64, data=values, synchronizer=zarr.ThreadSynchronizer()
+    )        
+    store.close()
+
 
 ID = 0
 # @param outcome: the result of the game. 0 means that team 1 won and team 2 lost, 1 means that team 1 lost and team 2 won
-def create_states_from_moves(moves, time, row, line, value_and_policy_dict, outcome, looser, outputdirectory = 'dataset/'):
+def create_states_from_moves(moves, time, row, line, value_and_policy_dict, outcome, looser,datapointSaver:DatapointSaver,outputdirectory = 'dataset/'):
     # bughouseEnv.reset()  # reset the object, to reuse it
     # set the initial time for every player
     global ID
@@ -151,8 +230,8 @@ def create_states_from_moves(moves, time, row, line, value_and_policy_dict, outc
                 else:
                     value_and_policy_dict[fen_key] = ([value], {uci_move : 1})
             except:
-                print(row)
-                print(line)
+                # print(row)
+                # print(line)
                 line_of_games_with_illegal_moves.append(line)
                 break
             bughouseEnv.set_time_remaining(time, team_number, board_number)
@@ -161,12 +240,15 @@ def create_states_from_moves(moves, time, row, line, value_and_policy_dict, outc
             str_policies = np.array(constants.LABELS)
             policy[np.where(np.isin(str_policies, uci_move))] = 1.
             rl_datapoint = RL_Datapoint(bughouseEnv.get_state().matrice_stack, policy, value)
-            rl_datapoint.zip_data(outputdirectory + str(ID) + '.zip')
+            # rl_datapoint.zip_data(outputdirectory + str(ID) + '.zip')
+            datapointSaver.append(rl_datapoint)
             # with open(outputdirectory + str(ID) + '.pkl', 'wb') as output_file:
             #     # pickle.dump(bughouseEnv.get_state(), output_file, pickle.HIGHEST_PROTOCOL)
             #     pickle.dump(rl_datapoint, output_file, pickle.HIGHEST_PROTOCOL)
             #     output_file.close()
             ID+=1
+            if (ID%10000 == 0):
+                return 1
             # if ID == 100000:
             #     return
 
@@ -176,7 +258,9 @@ def create_states_from_moves(moves, time, row, line, value_and_policy_dict, outc
             #     # pickle.dump(bughouseEnv.get_state(), output_file, pickle.HIGHEST_PROTOCOL)
             #     pickle.dump(rl_datapoint, output_file, pickle.HIGHEST_PROTOCOL)
             #     output_file.close()
-    return value_and_policy_dict
+    return 0
+
+
 def create_dataset(input_file_with_moves, outputdirectory = 'dataset/'):
     line = 0
     value_and_policy_dict = {}
@@ -187,6 +271,12 @@ def create_dataset(input_file_with_moves, outputdirectory = 'dataset/'):
         os.makedirs(outputdirectory)
         print("The dataset directory was created at: %s", outputdirectory)
 
+    zip_length = 10000
+    datapointSaver = DatapointSaver(outputdirectory, zip_length=zip_length)
+    start_time = datetime.datetime.now()
+    a = datetime.datetime.now()
+    file_count = 1
+    games_per_file_count = 0
     with open(input_file_with_moves, encoding='latin-1') as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
         for row in csv_reader:
@@ -200,9 +290,19 @@ def create_dataset(input_file_with_moves, outputdirectory = 'dataset/'):
                 b = BughouseEnv()
                 outcome = row[2]
                 looser = row[3]
-                value_and_policy_dict = create_states_from_moves(moves, row[0], row, line, value_and_policy_dict, outcome, looser, outputdirectory)
+                val = create_states_from_moves(moves, row[0], row, line, value_and_policy_dict, outcome, looser,datapointSaver, outputdirectory)
+                if val==1:
+                    b = datetime.datetime.now()
+                    c = b-a
+                    print('')
+                    print('ID: ', file_count, ' - Whole Time: ', (b-start_time).total_seconds(), ' - Time: ',c.total_seconds(), ' - Games in this file:', games_per_file_count, '- Avg Games/File', games_count/file_count, ' - Total Games: ', games_count)
+                    a = datetime.datetime.now()
+                    games_per_file_count = 0
+                    file_count +=1 
+                games_per_file_count +=1
                 games_count+=1
-                print(games_count)
+                sys.stdout.write("\r%i" % games_count)
+
         # if ID == 100000:
         #     return
 
@@ -271,10 +371,18 @@ def createDataset(state_file,value_policy_file):
         if counter == 10:
             break
     return examples
+import sys
+# i = 9
+# sys.stdout.write("\r%i" % i)
+# i = 10
+# sys.stdout.write("\r%i" % i)
+# i = 11
+# sys.stdout.write("\r%i" % i)
+# sys.stdout.write("\r%i" % (i+1))
 # pl = load_zip('dataset/0.zip')
 # l = read_dataset(r'dataset\0.pkl')
 # print(l)
-value_policy_dict = create_dataset('filtered_dataset_small.csv','data/')
+value_policy_dict = create_dataset('filtered_dataset_small.csv','dataBundleCompressed/')
 print('Data preprocessing finished.')
 
 # import os 
@@ -300,7 +408,3 @@ print('Data preprocessing finished.')
 #         break
 # value_policy_dict = read_value_and_policy_dict(r'dataset\BACK_value_and_policy_dict_1.0.pkl')
 # create_states_from_moves(moves, b, 180)
-
-
-
-
