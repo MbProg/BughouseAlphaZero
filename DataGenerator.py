@@ -172,7 +172,7 @@ def generator(batch_size, datasetFileLength, path='dataset/'):
         np.random.shuffle(files_sequence)
 
         for file_step, file_id in enumerate(files_sequence): 
-            X, policies, values = __read_file_data(file_id)
+            X, policies, values = __read_file_data(file_id,path)
             rand_indices = np.arange(len(X))
             np.random.shuffle(rand_indices)
 
