@@ -21,3 +21,5 @@ filtered_dataset_small - Copy.csv
 data/
 dataBundleCompressed/
 datapkl/
+dataset_tuning/
+.ipynb_checkpoints/DemoNN-checkpoint.ipynb
