@@ -4,11 +4,14 @@ import time
 from Arena import Arena
 from MCTS import MCTS
 from websocket import create_connection
+from numpy.random import choice
+import bughouse.constants as constants
 
 
 class BugHouseArena(Arena):
     """
     """
+
     def __init__(self, game, nnet, args, display=None):
         """
         Input:
@@ -59,7 +62,6 @@ class BugHouseArena(Arena):
             if result == "go":
                 gameStart = True
 
-
             # dataList.append("datalist:"+result)
 
             if result == 'protover 4':
@@ -77,26 +79,26 @@ class BugHouseArena(Arena):
                 if InitialMove:
                     action  # run action
                     InitialMove = False
-                    state, curPlayer,action = self.performActionAgainsNetworkPlayer(state,curPlayer)
+                    state, curPlayer, action = self.performActionAgainsNetworkPlayer(state, curPlayer)
                     dataList = []
                     ws.send(action)
                     action = ''
                     continue
                 if action != '':
-                    state, curPlayer,action = self.performActionAgainsNetworkPlayer(state,curPlayer,action)
+                    state, curPlayer, action = self.performActionAgainsNetworkPlayer(state, curPlayer, action)
                     ws.send(action)
                     action = ''
 
                 else:
-                    state, curPlayer,action = self.performActionAgainsNetworkPlayer(state,curPlayer)
+                    state, curPlayer, action = self.performActionAgainsNetworkPlayer(state, curPlayer)
                     ws.send(action)
                     action = ''
 
                 dataList = []
         ws.close()
 
-    def performActionAgainsNetworkPlayer(self, state,curPlayer, actionString=''):
-        if actionString=='':
+    def performActionAgainsNetworkPlayer(self, state, curPlayer, actionString=''):
+        if actionString == '':
             actionNumber = np.argmax(self.mcts.getActionProb(state, temp=0))
             # action = players[curPlayer+1](self.game.getCanonicalForm(state, curPlayer))
             actionString = self.game.getActionString(actionNumber)
@@ -109,7 +111,7 @@ class BugHouseArena(Arena):
             assert valids[actionNumber] > 0
         state, curPlayer = self.game.getNextState(curPlayer, actionNumber, state)
 
-        return state, curPlayer,actionString
+        return state, curPlayer, actionString
 
     def playGame(self, verbose=False):
         """
@@ -125,29 +127,40 @@ class BugHouseArena(Arena):
         curPlayer = 1
         state = self.game.getInitBoard()
         it = 0
-        while self.game.getGameEnded(state, curPlayer)==0:
-            it+=1
+        while self.game.getGameEnded(state, curPlayer) == 0:
+            it += 1
             if verbose:
-                assert(self.display)
+                assert (self.display)
                 print("Turn ", str(it), "Player ", str(curPlayer))
                 self.display(state)
-            self.mcts.startMCTS(state, depth=1)
+            self.mcts.startMCTS(state, depth=0)
             while self.mcts.has_finished():
-                time.sleep(0.01)
+                time.sleep(0.03)
                 pass
-            action = np.argmax(self.mcts.stopMCTS(temp=0))
-            #action = np.argmax(self.mcts.getActionProb_seq(state, temp=0))
+            actions = self.mcts.stopMCTS(temp=0.75)
+            action = np.argmax(actions)
+
+            draw = choice(np.arange(len(actions)), 1, p=actions)
+            # if action != draw:
+            #   print("RANDOM SHIT")
+            #   print(actions[int(draw)])
+            #    print(actions[action])
+            # else:
+            # print("SAME")
+            # print(actions[int(draw)])
+            # print(actions[action])
+            # action = np.argmax(self.mcts.getActionProb_seq(state, temp=0))
             # action = players[curPlayer+1](self.game.getCanonicalForm(state, curPlayer))
 
-            valids = self.game.getValidMoves(self.game.getCanonicalForm(state, curPlayer),1)
+            valids = self.game.getValidMoves(self.game.getCanonicalForm(state, curPlayer), 1)
 
-            if valids[action]==0:
+            if valids[action] == 0:
                 print(action)
-                assert valids[action] >0
+                assert valids[action] > 0
             state, curPlayer = self.game.getNextState(curPlayer, action, state)
-            print(state._fen[0])
+            # print(state._fen[0])
         if verbose:
-            assert(self.display)
+            assert (self.display)
             print("Game over: Turn ", str(it), "Result ", str(self.game.getGameEnded(state, 1)))
             self.display(state)
         return self.game.getGameEnded(state, 1)
@@ -168,44 +181,50 @@ class BugHouseArena(Arena):
         eps = 0
         maxeps = int(num)
 
-        num = int(num/2)
+        num = int(num / 2)
         oneWon = 0
         twoWon = 0
         draws = 0
         for _ in range(num):
             gameResult = self.playGame(verbose=verbose)
-            if gameResult==1:
-                oneWon+=1
-            elif gameResult==-1:
-                twoWon+=1
+            if gameResult == 1:
+                oneWon += 1
+            elif gameResult == -1:
+                twoWon += 1
             else:
-                draws+=1
+                draws += 1
             # bookkeeping + plot progress
             eps += 1
             eps_time.update(time.time() - end)
             end = time.time()
-            bar.suffix  = '({eps}/{maxeps}) Eps Time: {et:.3f}s | Total: {total:} | ETA: {eta:}'.format(eps=eps+1, maxeps=maxeps, et=eps_time.avg,
-                                                                                                       total=bar.elapsed_td, eta=bar.eta_td)
+            bar.suffix = '({eps}/{maxeps}) Eps Time: {et:.3f}s | Total: {total:} | ETA: {eta:}'.format(eps=eps + 1,
+                                                                                                       maxeps=maxeps,
+                                                                                                       et=eps_time.avg,
+                                                                                                       total=bar.elapsed_td,
+                                                                                                       eta=bar.eta_td)
             bar.next()
 
         self.player1, self.player2 = self.player2, self.player1
-        
+
         for _ in range(num):
             gameResult = self.playGame(verbose=verbose)
-            if gameResult==-1:
-                oneWon+=1                
-            elif gameResult==1:
-                twoWon+=1
+            if gameResult == -1:
+                oneWon += 1
+            elif gameResult == 1:
+                twoWon += 1
             else:
-                draws+=1
+                draws += 1
             # bookkeeping + plot progress
             eps += 1
             eps_time.update(time.time() - end)
             end = time.time()
-            bar.suffix  = '({eps}/{maxeps}) Eps Time: {et:.3f}s | Total: {total:} | ETA: {eta:}'.format(eps=eps+1, maxeps=num, et=eps_time.avg,
-                                                                                                       total=bar.elapsed_td, eta=bar.eta_td)
+            bar.suffix = '({eps}/{maxeps}) Eps Time: {et:.3f}s | Total: {total:} | ETA: {eta:}'.format(eps=eps + 1,
+                                                                                                       maxeps=num,
+                                                                                                       et=eps_time.avg,
+                                                                                                       total=bar.elapsed_td,
+                                                                                                       eta=bar.eta_td)
             bar.next()
-            
+
         bar.finish()
 
         return oneWon, twoWon, draws
