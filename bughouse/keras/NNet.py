@@ -20,8 +20,8 @@ args = dotdict({
 })
 
 class NNetWrapper(NeuralNet):
-    def __init__(self, game):
-        self.nnet = bughouseNet(game, args)
+    def __init__(self, game, modelweights_path = 'models/model-05.hdf5'):
+        self.nnet = bughouseNet(game, args, modelweights_path)
         self.depth, self.height, self.width = game.getBoardSize()
         self.action_size = game.getActionSize()
 
