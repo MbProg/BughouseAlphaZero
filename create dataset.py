@@ -57,7 +57,7 @@ class RL_Datapoint():
         )        
         store.close()
 class DatapointSaver():
-    def __init__(self,filedirectory='dataset/',zip_length=1024, state_shape=(60,8,8),policy_shape=(constants.NB_LABELS,),autosave=True, cname='lz4', clevel=4):
+    def __init__(self,filedirectory='dataset/',zip_length=1024, state_shape=(60,8,8),policy_shape=(constants.NB_LABELS,),autosave=True, cname='lz4', clevel=4, ID = 0):
         self.zip_length = zip_length
         self.X = np.empty((zip_length,state_shape[0],state_shape[1],state_shape[2]))
         self.policies = np.empty((zip_length,policy_shape[0]))
@@ -67,7 +67,7 @@ class DatapointSaver():
         self.clevel = clevel
         self.filedirectory = filedirectory
         self.autosave = autosave
-        self.ID = 0
+        self.ID = ID
     
     def append(self,rl_datapoint):
         if (self.counter+1==self.zip_length):
@@ -85,6 +85,7 @@ class DatapointSaver():
     def _zipData(self):
         compressor = Blosc(cname=self.cname, clevel=self.clevel, shuffle=Blosc.BITSHUFFLE)
         store = zarr.ZipStore(self.filedirectory + str(self.ID) + '.zip', mode="w")
+        print('File ', str(self.ID) + '.zip saved.')
         zarr_file = zarr.group(store=store, overwrite=True)
         zarr_file.create_dataset(
             name="states",
@@ -261,7 +262,7 @@ def create_states_from_moves(moves, time, row, line, value_and_policy_dict, outc
     return 0
 
 
-def create_dataset(input_file_with_moves, outputdirectory = 'dataset/'):
+def create_dataset(input_file_with_moves, outputdirectory = 'dataset/', first_ID = 0):
     line = 0
     value_and_policy_dict = {}
     save_step = 1000
@@ -272,7 +273,7 @@ def create_dataset(input_file_with_moves, outputdirectory = 'dataset/'):
         print("The dataset directory was created at: %s", outputdirectory)
 
     zip_length = 10000
-    datapointSaver = DatapointSaver(outputdirectory, zip_length=zip_length)
+    datapointSaver = DatapointSaver(outputdirectory, zip_length=zip_length, ID = first_ID)
     start_time = datetime.datetime.now()
     a = datetime.datetime.now()
     file_count = 1
@@ -289,13 +290,13 @@ def create_dataset(input_file_with_moves, outputdirectory = 'dataset/'):
                 line += 1
                 b = BughouseEnv()
                 outcome = row[2]
-                looser = row[3]
+                looser = row[4]
                 val = create_states_from_moves(moves, row[0], row, line, value_and_policy_dict, outcome, looser,datapointSaver, outputdirectory)
                 if val==1:
                     b = datetime.datetime.now()
                     c = b-a
                     print('')
-                    print('ID: ', file_count, ' - Whole Time: ', (b-start_time).total_seconds(), ' - Time: ',c.total_seconds(), ' - Games in this file:', games_per_file_count, '- Avg Games/File', games_count/file_count, ' - Total Games: ', games_count)
+                    print('ID: ', file_count, ' - Whole Time: ', (b-start_time).total_seconds(), ' - Time: ',c.total_seconds(), ' - Games in this file:', games_per_file_count, '- Avg Games/File', games_count/file_count, ' - Total Games: ', games_count, ' - Filename: ' , input_file_with_moves)
                     a = datetime.datetime.now()
                     games_per_file_count = 0
                     file_count +=1 
@@ -306,7 +307,7 @@ def create_dataset(input_file_with_moves, outputdirectory = 'dataset/'):
         # if ID == 100000:
         #     return
 
-    return value_and_policy_dict
+    return datapointSaver.ID
 
 
 
@@ -382,7 +383,16 @@ import sys
 # pl = load_zip('dataset/0.zip')
 # l = read_dataset(r'dataset\0.pkl')
 # print(l)
-value_policy_dict = create_dataset('filtered_dataset_small.csv','dataBundleCompressed/')
+listFiles = [
+        'filtered_dataset_2011.csv','filtered_dataset_2012.csv','filtered_dataset_2013.csv','filtered_dataset_2014.csv','filtered_dataset_2015.csv',
+        'filtered_dataset_2016.csv']
+Last_Id = 3542
+# Last_Id = create_dataset('dataRaw/filtered_dataset_2005.csv','dataReal/')
+for filename in listFiles:
+    print('**********************************************************')
+    print('Filename: ', filename)
+    Last_Id = create_dataset('dataRaw/' + filename, 'dataRealTestValue/',Last_Id)
+    print('**********************************************************')
 print('Data preprocessing finished.')
 
 # import os 
@@ -408,3 +418,7 @@ print('Data preprocessing finished.')
 #         break
 # value_policy_dict = read_value_and_policy_dict(r'dataset\BACK_value_and_policy_dict_1.0.pkl')
 # create_states_from_moves(moves, b, 180)
+
+
+
+
