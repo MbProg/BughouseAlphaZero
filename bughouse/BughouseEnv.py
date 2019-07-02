@@ -80,21 +80,21 @@ class BughouseEnv():
         team = self.get_team(player_color, board)
         return BughouseState(self.boards.to_numpy(self.board), time, team, board, _fen)
 
-    def game_finished(self):
+    def game_finished(self, board = None):
         """
         Check if the game has finished
         :return: Bool
         """
 
-        return self.boards.is_game_over()
+        return self.boards.is_game_over(board)
 
-    def get_score(self):
+    def get_score(self, board = None):
         """
         Checks the result of a game
         Score: 1 White win, -1 Black Win, 0 Draw
         :return: Array [Left Board result, Right Board result, game finished]
         """
-        return self.boards.result()
+        return self.boards.result(board)
 
     def set_time_remaining(self, time, team, board):
         """
