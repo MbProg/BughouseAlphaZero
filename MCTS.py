@@ -23,7 +23,7 @@ class MCTSData():
         self.lock = threading.Lock()
 
 class MCTS():
-    AVAILABLE_CORES = 2
+    AVAILABLE_CORES = 1
 
     def __init__(self, game, nnet, args):
         self.args = args
@@ -103,8 +103,8 @@ class MCTS():
         self._mcts_delta_time = self.eval_time(self._mcts_eval_state)
         self._run_mcts = True
         for i in range(self.AVAILABLE_CORES):
-            self._mcts_thread[i] = threading.Thread(target=self.__thread_getActionProb_seq,
-                                             kwargs={'thread_id': i, 'canonicalBoard': self._mcts_eval_state, 'depth': depth})
+            self._mcts_thread[i] = threading.Thread(target=self._thread_getActionProb_seq,
+                                                    kwargs={'thread_id': i, 'canonicalBoard': self._mcts_eval_state, 'depth': depth})
             self._mcts_thread[i].daemon = True
             self._mcts_thread[i].start()
         return True
@@ -129,6 +129,8 @@ class MCTS():
         counts = [x ** (1. / temp) for x in counts]
         probs = [x / float(sum(counts)) for x in counts]
         self._mcts_probs = probs
+        self._mcts_finished = [True] * self.AVAILABLE_CORES
+        return self._mcts_probs
 
     def eval_new_state(self, canonicalBoard):
         if self._mcts_eval_state is not None:
@@ -152,14 +154,14 @@ class MCTS():
         moves, value = self.nnet.predict(canonicalBoard)
         self.data.lock.release()
         # ToDo a good formula for time
-        time = 0.5
+        time = 0.2
         return time
 
     def has_finished(self):
         return time.time() <= (self._mcts_start_time + self._mcts_delta_time)
 
 
-    def __thread_getActionProb_seq(self,thread_id , canonicalBoard, depth=0):
+    def _thread_getActionProb_seq(self, thread_id, canonicalBoard, depth=0):
         self.lock.acquire()
         self._mcts_finished[thread_id] = False
         self.lock.release()
@@ -169,7 +171,7 @@ class MCTS():
             game_copy.setState(canonicalBoard)
             search_mcts(canonicalBoard, self.data, game_copy, self.nnet, depth)
             counter += 1
-        print(counter)
+        # print(counter)
         self.lock.acquire()
         self._mcts_finished[thread_id] = True
         self.lock.release()
@@ -208,6 +210,7 @@ def search_mcts(canonicalBoard, data: MCTSData, game, nnet, depth = 2):
         valids = game.getValidMoves(canonicalBoard, 1)
         data.lock.acquire()
         data.Ps[s], v = nnet.predict(canonicalBoard)
+        # v = simplified_value_fct(canonicalBoard)
         data.Ps[s] = data.Ps[s]*valids      # masking invalid moves
         sum_Ps_s = np.sum(data.Ps[s])
         if sum_Ps_s > 0:
@@ -347,3 +350,44 @@ def search_mcts_seq(canonicalBoard, data: MCTSData, game, nnet, depth = 2):
 
     data.Ns[s] += 1
     return -v
+
+def prune_mcts_data(data: MCTSData, max_depth = 4):
+    key_s = []
+    key_sa = []
+    for key,value in data.Ns.items():
+        if value >= 1 and (int(key.split(" ", 5)[-1]) < max_depth):
+            for tuple_key,_ in data.Nsa.items():
+                if key == tuple_key[0]:
+                    key_sa.append(tuple_key)
+            key_s.append(key)
+
+    for key in key_s:
+        tmp_dict = {k: data.Ps[k] for k in key_s}
+        data.Ps = tmp_dict
+        tmp_dict = {k: data.Vs[k] for k in key_s}
+        data.Vs = tmp_dict
+        tmp_dict = {k: data.Es[k] for k in key_s}
+        data.Es = tmp_dict
+        tmp_dict = {k: data.Ns[k] for k in key_s}
+        data.Ns = tmp_dict
+
+    for tuple_key in key_sa:
+        tmp_dict = {k: data.Nsa[k] for k in key_sa}
+        data.Nsa = tmp_dict
+        tmp_dict = {k: data.Qsa[k] for k in key_sa}
+        data.Qsa = tmp_dict
+
+def simplified_value_fct(state):
+    value = 0
+    value += state.matrice_stack[0].sum()    # My pawns
+    value += state.matrice_stack[1].sum()*3  # My knights
+    value += state.matrice_stack[2].sum()*3  # My bishop
+    value += state.matrice_stack[3].sum()*5    # My rook
+    value += state.matrice_stack[4].sum()*9  # My queen
+
+    value -= state.matrice_stack[6].sum()    # Enemy pawns
+    value -= state.matrice_stack[7].sum()*3  # Enemy knights
+    value -= state.matrice_stack[8].sum()*3  # Enemy bishop
+    value -= state.matrice_stack[9].sum()*5    # Enemy rook
+    value -= state.matrice_stack[10].sum()*9  # Enemy queen
+    return value / 39

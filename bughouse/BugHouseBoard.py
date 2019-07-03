@@ -275,6 +275,9 @@ class _BughouseBoard(chess.variant.CrazyhouseBoard):
             return np.flip(np.flip(board_state_game, 0), 1)
         return board_state_game
 
+    def fifty_moves_rule(self):
+        return True if self.halfmove_clock >= 50 else False
+
 
 class BughouseBoards:
     aliases = ["Bughouse", "Bug House", "BH"]
@@ -346,33 +349,61 @@ class BughouseBoards:
         board_fen = [self.boards[0].board_fen(), self.boards[1].board_fen()]
         return board_fen
 
-    def is_checkmate(self) -> bool:
+    def is_checkmate(self, board = None) -> bool:
         return self.boards[self.LEFT].is_checkmate() or self.boards[self.RIGHT].is_checkmate()
 
-    def is_game_over(self) -> bool:
-        return self.is_checkmate() or not (any(True for _ in self.boards[self.LEFT].legal_moves)
-                                           or any(True for _ in self.boards[self.RIGHT].legal_moves))
+    def fifty_moves_rule(self, board = None):
+        if board is None:
+            return self.boards[self.LEFT].fifty_moves_rule() or self.boards[self.RIGHT].fifty_moves_rule()
+        else:
+            return self.boards[board].fifty_moves_rule()
 
-    def result(self):
-        # ToDo check win conditions
+
+    def is_threefold_repetition(self, board = None):
+        if board is None:
+            return self.boards[self.LEFT].is_repetition(3) or self.boards[self.RIGHT].is_repetition(3)
+        else:
+            self.boards[board].is_repetition(3)
+
+    def is_game_over(self, board = None) -> bool:
+        if board is None:
+            return (self.is_checkmate() or self.possible_stalemate() or self.fifty_moves_rule())
+        else:
+            return (self.is_checkmate(board) or self.possible_stalemate(board) or self.fifty_moves_rule(board))
+
+    def possible_stalemate(self, board = None) -> bool:
+        if board is None:
+            return not (any(self.boards[self.LEFT].generate_legal_moves())
+                                           or any(self.boards[self.RIGHT].generate_legal_moves()))
+        else:
+            return not any(self.boards[board].generate_legal_moves())
+
+    def result(self, board = None):
         # the returned arrays constist of [Left Board, Right Board, Game has ended]
         # score of 1 means White wins, -1 means Black wins and 0 is a draw
         # Check external influnce like time or withdraw
 
         # Checkmate
-        if self.is_checkmate():
-            if self.boards[self.LEFT].is_checkmate():
-                return np.asarray([1, 0, 1]) if self.boards[self.LEFT].turn == chess.WHITE \
-                    else np.asarray([-1, 0, 1])
-            else:
-                return np.asarray([1, 0, 1]) if self.boards[self.RIGHT].turn == chess.WHITE \
-                    else np.asarray([-1, 0, 1])
-        # Check for a draw
-        if self.is_threefold_repetition():
-            return np.asarray([0, 0, 1])
-        # Still ongoing
-        return np.asarray([0, 0, 0])
-
+        if board is None:
+            if self.is_checkmate():
+                if self.boards[self.LEFT].is_checkmate():
+                    return np.asarray([-1, 0, 1]) if self.boards[self.LEFT].turn == chess.WHITE \
+                        else np.asarray([1, 0, 1])
+                else:
+                    return np.asarray([-1, 0, 1]) if self.boards[self.RIGHT].turn == chess.WHITE \
+                        else np.asarray([1, 0, 1])
+            # Check for a draw
+            if (self.is_threefold_repetition() or self.fifty_moves_rule() or  self.possible_stalemate()):
+                return np.asarray([0, 0, 1])
+            # Still ongoing
+            return np.asarray([0, 0, 0])
+        else:
+            if self.is_checkmate(board):
+                return 1 if self.boards[board].turn == chess.WHITE \
+                    else -1
+            # Check for a draw
+            if (self.is_threefold_repetition(board) or self.fifty_moves_rule(board) or  self.possible_stalemate(board)):
+                return 0
     def set_result(self, board, score):
         self.boards[board]._end_game(score)
 
