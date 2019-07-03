@@ -25,3 +25,5 @@ dataset_tuning/
 .ipynb_checkpoints/DemoNN-checkpoint.ipynb
 logs/
 dataReal/
+dataCorrected/
+dataSmallPart/
