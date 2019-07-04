@@ -181,7 +181,7 @@ def create_states_from_moves(moves, time, row, line, value_and_policy_dict, outc
             time = float(move)
 
             #update value_and_policy dictionary
-            fen_key = bughouseEnv.get_state()._fen
+            fen_key = bughouseEnv.get_state()._boards_fen
             fen_key.append(str(team_number))
             fen_key.append(str(board_number))
             fen_key = ' '.join(fen_key)
@@ -384,14 +384,19 @@ import sys
 # l = read_dataset(r'dataset\0.pkl')
 # print(l)
 listFiles = [
+        'filtered_dataset_2005.csv','filtered_dataset_2006.csv','filtered_dataset_2007.csv','filtered_dataset_2008.csv','filtered_dataset_2009.csv',
+        'filtered_dataset_2010.csv'
         'filtered_dataset_2011.csv','filtered_dataset_2012.csv','filtered_dataset_2013.csv','filtered_dataset_2014.csv','filtered_dataset_2015.csv',
-        'filtered_dataset_2016.csv']
-Last_Id = 3542
+        'filtered_dataset_2016.csv','filtered_dataset_2017.csv','filtered_dataset_2018.csv',]
+Last_Id = 0
 # Last_Id = create_dataset('dataRaw/filtered_dataset_2005.csv','dataReal/')
 for filename in listFiles:
     print('**********************************************************')
     print('Filename: ', filename)
-    Last_Id = create_dataset('dataRaw/' + filename, 'dataRealTestValue/',Last_Id)
+    try:
+        Last_Id = create_dataset('dataRaw/' + filename, 'datasetValueCorrect/',Last_Id)
+    except:
+        print('Exception....')
     print('**********************************************************')
 print('Data preprocessing finished.')
 
