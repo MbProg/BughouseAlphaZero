@@ -9,6 +9,7 @@ from keras.layers import Input, Dense, Conv2D, Flatten, BatchNormalization, Acti
 from keras import optimizers
 from keras.callbacks import ModelCheckpoint
 from keras.layers import *
+import keras
 
 
 class BugHouseNet():
@@ -48,7 +49,7 @@ class BugHouseNet():
 
         return x
 
-    def __getResidualNetwork(input_shape, output_value=1, output_policy=2272):
+    def __getResidualNetwork(self, input_shape, output_value=1, output_policy=2272):
 
         channel_pos = 'channels_first'
         inp_shape = Input(input_shape, name='input1')
