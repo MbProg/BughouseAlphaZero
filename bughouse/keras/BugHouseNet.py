@@ -98,3 +98,13 @@ class BugHouseNet():
 
         model.summary()
         return model
+
+    def predict(self, data):
+        """
+        Input: numpy array with shape (1, shape of state) e.g. (1, 60, 8 , 8)
+                should be channel_first
+        """
+        pi, v = self.model.predict(data)
+
+        # print('PREDICTION TIME TAKEN : {0:03f}'.format(time.time()-start))
+        return pi[0], v[0]
