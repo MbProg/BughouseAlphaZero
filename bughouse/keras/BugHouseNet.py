@@ -13,7 +13,7 @@ import keras
 
 
 class BugHouseNet():
-    def __init__(self, game, args, modelweights_path='models/model-05.hdf5'):
+    def __init__(self, args, modelweights_path='models/model-05.hdf5'):
         self.CLASSES_LEN = NB_LABELS
         self.channel_pos = 'channels_last'
         self.inp_shape = (60, 8, 8)  # TODO: this should be read from the environment

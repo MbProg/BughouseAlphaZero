@@ -7,7 +7,7 @@ from constants import NB_LABELS
 import numpy as np
 
 class RandomNet():
-    def __init__(self, game, args, modelweights_path=''):
+    def __init__(self, args, modelweights_path=''):
         self.action_size = NB_LABELS
 
     def predict(self, board):
