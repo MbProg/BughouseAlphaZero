@@ -1,4 +1,5 @@
-
+TEAMS = [BOTTOM, TOP] = [TEAM_A, TEAM_B] = [0, 1]
+BOARDS = [LEFT, RIGHT] = [BOARD_A, BOARD_B] = [0, 1]
 
 # Labels according to: https://github.com/QueensGambit/CrazyAra/blob/master/DeepCrazyhouse/src/domain/crazyhouse/constants.py
 LABELS = [
