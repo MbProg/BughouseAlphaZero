@@ -34,7 +34,7 @@ class BughouseEnv():
 
     TEAMS = [BOTTOM, TOP] = [TEAM_A, TEAM_B] = [0, 1]
     BOARDS = [LEFT, RIGHT] = [BOARD_A, BOARD_B] = [0, 1]
-    MAX_TIME = 600 # In Seconds ToDo get real time
+    MAX_TIME = 300 # In Seconds ToDo get real time
 
 
     def __init__(self, team=0, board=0):
@@ -44,7 +44,7 @@ class BughouseEnv():
         self.last_board_moved = board
         self.color = (team == board)  # Bottom left (00) is White(1) same as Top Right (11)
         self.boards = BughouseBoards()
-        self.time_remaining = np.full((2, 2), self.MAX_TIME) # (Teams, Boards)
+        self.time_remaining = np.full((2, 2), self.MAX_TIME)  # (Teams, Boards)
 
     def __call__(self, action) -> BughouseState:
         return self.propapagete_board(action)
@@ -56,29 +56,34 @@ class BughouseEnv():
 
     def propapagete_board(self, action) -> BughouseState:
         self.push(action, self.team, self.board)  # Execute the action
-        _fen = self.boards.fen()
-        player_color = self.boards.boards[self.board].turn
         board = self.board
-        time = self.flip_time(board)
-        team = self.get_team(player_color, board)
-        return BughouseState(self.boards.to_numpy(self.board), time, team, board, _fen)
-
-    def get_state(self):
+        #time = self.flip_time(board)
         time = self.time_remaining
-        _fen = self.boards.fen()
-        board = self.last_board_moved
-        time = self.flip_time(board)
-        player_color = self.boards.boards[board].turn
+        player_color = self.boards.boards[self.board].turn
         team = self.get_team(player_color, board)
+        _fen = self.boards.fen()
         return BughouseState(self.boards.to_numpy(board), time, team, board, _fen)
 
+    def get_state(self):
+        board = self.last_board_moved
+        # time = self.flip_time(board)
+        time = self.time_remaining
+        player_color = self.boards.boards[board].turn
+        team = self.get_team(player_color, board)
+        _fen = self.boards.fen()
+        self.time_remaining = np.full((2, 2), self.MAX_TIME) # (Teams, Boards)
+        return BughouseState(self.boards.to_numpy(self.board), time, team, board, _fen)
+
     def get_board_state(self):
+        """
+        Shows the state of the specified board independent on who moved last
+        :return: BugHouseState object
+        """
         _fen = self.boards.fen()
         player_color = self.boards.boards[self.board].turn
-        board = self.last_board_moved
-        time = self.flip_time(board)
-        team = self.get_team(player_color, board)
-        return BughouseState(self.boards.to_numpy(self.board), time, team, board, _fen)
+        time = self.time_remaining
+        team = self.get_team(player_color, self.board)
+        return BughouseState(self.boards.to_numpy(self.board), time, team, self.board, _fen)
 
     def game_finished(self, board = None):
         """
@@ -118,11 +123,6 @@ class BughouseEnv():
         """
         self.last_board_moved = board
         self.boards.boards[board].push_uci(uci_move)
-        # color = self.boards.boards[board].turn
-        # if color == (team == board):
-        #     self.boards.boards[board].push_uci(uci_move)
-        # else:
-        #     warnings.warn("Warning")
 
     def push_san(self, san_move: str, team, board, to_uci: bool = False):
         """
@@ -139,6 +139,9 @@ class BughouseEnv():
         self.boards.boards[board].push(move)
         if to_uci:
             return move.uci()
+
+    def push_action(self, action: int, board):
+        self.push(constants.LABELS[action], 0, board)
 
     def get_legal_moves_dict(self, side=None):
         """
