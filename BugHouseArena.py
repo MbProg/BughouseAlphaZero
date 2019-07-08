@@ -3,10 +3,13 @@ from pytorch_classification.utils import Bar, AverageMeter
 import time
 from Arena import Arena
 from MCTS import MCTS
-from websocket import create_connection
 from numpy.random import choice
 import bughouse.constants as constants
-
+from bughouse.BugHouseGame import BugHouseGame
+from WebSocketGameClient import WebSocketGameClient
+import threading
+from bughouse.BughouseEnv import BughouseEnv
+from MCTS import MCTS
 
 class BugHouseArena(Arena):
     """
@@ -35,83 +38,64 @@ class BugHouseArena(Arena):
         self.game = game
         self.display = display
 
-    def playAgainstServer(self):
+    def playAgainstServer(self, random = False):
 
-        ws = create_connection("ws://127.0.0.1/websocketclient")
-        print("Sending 'Hello, World'...")
-        ws.send("Hello, World")
-        print("Sent")
-        print("Receiving...")
-        dataList = []
-        state = self.game.getInitBoard()
-
-        sent = True
-        insertDataList = True
-        gameStart = False
-        action = ''
-        InitialMove = False
+        wsgc = WebSocketGameClient()
         curPlayer = 1
+        ifmillis = 100.0 # use if gametime is given in milliseconds
+        delay = 60.0/ifmillis
+        connection_thread = threading.Thread(target=wsgc.connect)
+        connection_thread.daemon = True
+        connection_thread.start()
+        # Waiting for Connection
+        while wsgc.connected == False:
+            pass
+        # Waiting for game to start
+        while wsgc.game_started == False:
+            pass
+        start_time = time.time()
+        self.time_remaining = np.full((2, 2), wsgc.max_time / ifmillis)
+        self.game = BugHouseGame(wsgc.my_team, wsgc.my_board)
+        self.mcts = MCTS(self.game, self.nnet, self.args)
+        state = self.game.getInitBoard()
+        while wsgc.game_started == True:
+            if not wsgc.my_turn and wsgc.check_my_stack():
+                time_remaining = start_time - time.time() - delay
+                action = self.game.getActionNumber(wsgc.pop_my_stack())
+                state, curPlayer = self.game.getNextState(curPlayer, action)
 
-        while True:
-            result = ws.recv()
-            if gameStart:
-                action = result
+            if wsgc.check_partner_stack():
+                time_remaining = start_time - time.time() - delay
+                action = self.game.getActionNumber(wsgc.pop_partner_stack())
+                state, curPlayer = self.game.getNextState(curPlayer, action, play_other_board=True)
+                if self.mcts.is_running():
+                    print("eval_new_State")
+                    self.mcts.eval_new_state(state)
+                    time.sleep(0.05)
 
-            dataList.append(result)
+            if wsgc.my_turn and not self.mcts.is_running():
+                if self.game.getValidMoves(self.game.getCanonicalForm(state, curPlayer), curPlayer).sum() >= 1:
+                    self.mcts.startMCTS(state, depth=0)
+                # time.sleep(0.2)
 
-            if result == "go":
-                gameStart = True
-
-            # dataList.append("datalist:"+result)
-
-            if result == 'protover 4':
-                ws.send("feature")
-                if result == 'accepted':
-                    print("Yeahh, wait for game")
-
-                    # print(dataList)
-
-            # if I have partner 1 or partner 2 as team member -> I am the beginner
-            if gameStart:
-                if ("partner 1" in dataList or "partner2" in dataList):
-                    InitialMove = True
-
-                if InitialMove:
-                    action  # run action
-                    InitialMove = False
-                    state, curPlayer, action = self.performActionAgainsNetworkPlayer(state, curPlayer)
-                    dataList = []
-                    ws.send(action)
-                    action = ''
-                    continue
-                if action != '':
-                    state, curPlayer, action = self.performActionAgainsNetworkPlayer(state, curPlayer, action)
-                    ws.send(action)
-                    action = ''
-
-                else:
-                    state, curPlayer, action = self.performActionAgainsNetworkPlayer(state, curPlayer)
-                    ws.send(action)
-                    action = ''
-
-                dataList = []
-        ws.close()
-
-    def performActionAgainsNetworkPlayer(self, state, curPlayer, actionString=''):
-        if actionString == '':
-            actionNumber = np.argmax(self.mcts.getActionProb(state, temp=0))
-            # action = players[curPlayer+1](self.game.getCanonicalForm(state, curPlayer))
-            actionString = self.game.getActionString(actionNumber)
-        else:
-            actionNumber = self.game.getActionNumber(actionString)
-        valids = self.game.getValidMoves(self.game.getCanonicalForm(state, curPlayer), 1)
-
-        if valids[actionNumber] == 0:
-            print(actionNumber)
-            assert valids[actionNumber] > 0
-        state, curPlayer = self.game.getNextState(curPlayer, actionNumber, state)
-
-        return state, curPlayer, actionString
+            if wsgc.my_turn and self.mcts.has_finished() and not wsgc.check_partner_stack():
+                actions = self.mcts.stopMCTS(temp=0.2)
+                # action = np.argmax(actions)
+                # ToDo add drawing and change temp for more random
+                if random:
+                    actions = self.game.getValidMoves(self.game.getCanonicalForm(state, curPlayer), curPlayer)
+                    action = choice(np.arange(len(actions)), 1, p=(actions/actions.sum()))[0]
+                valids = self.game.getValidMoves(self.game.getCanonicalForm(state, curPlayer), curPlayer)
+                if valids[action] == 0:
+                    i = 0
+                    for v in valids:
+                        if v > 0:
+                            print(constants.LABELS[i])
+                        i += 1
+                    assert valids[action] > 0
+                state, curPlayer = self.game.getNextState(curPlayer, action, state)
+                wsgc.send_action(self.game.getActionString(action))
+                time_remaining = start_time - time.time() - delay
 
     def playGame(self, verbose=False):
         """
@@ -158,7 +142,7 @@ class BugHouseArena(Arena):
                 print(action)
                 assert valids[action] > 0
             state, curPlayer = self.game.getNextState(curPlayer, action, state)
-            # print(state._fen[0])
+            print(state._fen[0])
         if verbose:
             assert (self.display)
             print("Game over: Turn ", str(it), "Result ", str(self.game.getGameEnded(state, 1)))
