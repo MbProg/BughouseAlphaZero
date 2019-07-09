@@ -50,54 +50,54 @@ class BugHouseNet():
         return x
 
     def __getResidualNetwork(self, input_shape, output_value=1, output_policy=2272):
-
+        
         channel_pos = 'channels_first'
-        inp_shape = Input(input_shape, name='input1')
-        x = Conv2D(256, kernel_size=(3, 3), padding='same', input_shape=input_shape, data_format=channel_pos,
-                   name='conv2d_Prep')(inp_shape)
-        x = BatchNormalization(axis=1, name='batch_normalization_prep')(x)
-        x_a1 = Activation('relu', name='activation_prep')(x)
+        inp_shape = Input(input_shape,name='input1')
+        x = Conv2D(256, kernel_size=(3,3), padding = 'same', input_shape=input_shape,data_format=channel_pos,name='conv2d_Prep')(inp_shape)
+        x = BatchNormalization(axis=1,name='batch_normalization_prep')(x)
+        x_a1 = Activation('relu',name='activation_prep')(x)
         activated_x = x_a1
-
-        #     activated_x, x
+        
+    #     activated_x, x
         def createResidualBlock(block_nr, activated_x):
-            nr = block_nr * 2 - 1
-            x = Conv2D(256, kernel_size=(3, 3), name='conv2d_' + str(nr), padding='same', data_format=channel_pos)(
-                activated_x)
-            x = BatchNormalization(axis=1, name='batch_normalization_' + str(nr))(x)
-            x = Activation('relu', name='activation_' + str(nr))(x)
-            x = Conv2D(256, kernel_size=(3, 3), name='conv2d_' + str(nr + 1), padding='same', data_format=channel_pos)(
-                x)
-            x = BatchNormalization(axis=1, name='batch_normalization_' + str(nr + 1))(x)
-            x = keras.layers.add([x, activated_x], name='add_' + str(block_nr))
-            activated_x = Activation('relu', name='activation_' + str(nr + 1))(x)
+            nr = block_nr *2 -1
+            x = Conv2D(256, kernel_size=(3,3), name = 'conv2d_'+str(nr), padding='same',data_format=channel_pos)(activated_x)
+            x = BatchNormalization(axis=1, name = 'batch_normalization_'+str(nr))(x)
+            x = Activation('relu',name = 'activation_'+str(nr))(x)
+            x = Conv2D(256, kernel_size=(3,3), name = 'conv2d_'+str(nr+1),padding = 'same',data_format=channel_pos)(x)
+            x = BatchNormalization(axis=1, name = 'batch_normalization_'+str(nr+1))(x)
+            x = keras.layers.add([x,activated_x],name='add_' + str(block_nr))
+            activated_x = Activation('relu',name='activation_'+str(nr+1))(x)
             return activated_x
-
+        
         # build eight residual blocks
-        for i in range(1, 8):
+        for i in range (1,8):
             activated_x = createResidualBlock(i, activated_x)
+            
 
+        
         # Value header
-        x = Conv2D(1, kernel_size=(1, 1), name='value_conv2d', padding='same', data_format=channel_pos)(activated_x)
-        xb = BatchNormalization(axis=1, name='value_batch_normalization')(x)
-        xA = Activation('relu', name='value_activation')(xb)
+        x = Conv2D(4, kernel_size=(1,1),name='value_conv2d', padding = 'same',data_format=channel_pos)(activated_x)
+        xb = BatchNormalization(axis=1,name='value_batch_normalization')(x)
+        xA = Activation('relu',name='value_activation')(xb)
         xF = Flatten(name='value_flatten')(xA)
-        dense_1 = Dense(256, activation='relu', name='value_dense')(xF)
+        dense_1 = Dense(256, activation='relu',name='value_dense')(xF)
         value = Dense(output_value, activation='tanh', name='value')(dense_1)
 
         # Policy Header
-        xConv = Conv2D(8, kernel_size=(7, 7), padding='same', name='policy_conv2d', data_format=channel_pos)(
-            activated_x)
-        xb = BatchNormalization(axis=1, name='policy_batch_normalization')(xConv)
-        xA = Activation('relu', name='policy_activation')(xb)
+        xConv = Conv2D(8, kernel_size=(7,7), padding = 'same',name='policy_conv2d',data_format=channel_pos)(activated_x)
+        xb = BatchNormalization(axis=1,name='policy_batch_normalization')(xConv)
+        xA = Activation('relu',name='policy_activation')(xb)
         xF = Flatten(name='policy_flatten')(xA)
         policy = Dense(output_policy, activation='softmax', name='policy')(xF)
 
+
         from keras.models import Model
-        model = Model(inp_shape, [policy, value])
+        model = Model(inp_shape, [policy,value])
 
         model.summary()
         return model
+
 
     def predict(self, data):
         """
