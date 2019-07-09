@@ -23,11 +23,11 @@ class MCTSData():
         self.lock = threading.Lock()
 
 class MCTS():
-    AVAILABLE_CORES = 1
+    AVAILABLE_CORES = 2
 
     def __init__(self, game, nnet, args):
         self.args = args
-        self.game = game
+        self.game = copy.deepcopy(game)
         self.nnet = nnet
         self.data = MCTSData(args)
         self._mcts_thread = [None]*self.AVAILABLE_CORES
@@ -38,63 +38,6 @@ class MCTS():
         self._mcts_start_time = time.time()
         self._mcts_delta_time = -1.
         self.lock = threading.Lock()
-
-    def getActionProb(self, canonicalBoard, temp=1, n_tasks = 8, depth = 8):
-        start = time.time()
-        game_copys = []
-        nnet_copys = []
-        thread_list = []
-        for i in range(n_tasks):
-            game_copys.append(copy.deepcopy(self.game))
-            # nnet_copys.append(copy.deepcopy(self.nnet))
-        for i in range(self.args.numMCTSSims):
-            for game in game_copys:
-                game.setState(canonicalBoard)
-            for j in range(n_tasks):
-                t = threading.Thread(target=search_mcts, kwargs={'canonicalBoard': canonicalBoard,
-                                                                   'data': self.data, 'game': game_copys[j],
-                                                                   'nnet': self.nnet, 'depth': depth})
-                t.daemon = True
-                thread_list.append(t)
-                thread_list[j].start()
-
-            for thread in thread_list:
-                thread.join()
-            thread_list.clear()
-        print("end", time.time()-start)
-        self.game.setState(canonicalBoard)
-        s = self.game.stringRepresentation(canonicalBoard)
-        counts = [self.data.Nsa[(s,a)] if (s,a) in self.data.Nsa else 0 for a in range(self.game.getActionSize())]
-        print(sum(counts))
-        if temp==0:
-            bestA = np.argmax(counts)
-            probs = [0]*len(counts)
-            probs[bestA]=1
-            return probs
-
-        counts = [x**(1./temp) for x in counts]
-        probs = [x/float(sum(counts)) for x in counts]
-        return probs
-
-    def getActionProb_seq(self, canonicalBoard, temp=1, depth = 0):
-        start = time.time()
-        for i in range(self.args.numMCTSSims):
-            self.game.setState(canonicalBoard)
-            search_mcts_seq(canonicalBoard, self.data, self.game, self.nnet, depth)
-        print("end", time.time()-start)
-        self.game.setState(canonicalBoard)
-        s = self.game.stringRepresentation(canonicalBoard)
-        counts = [self.data.Nsa[(s,a)] if (s,a) in self.data.Nsa else 0 for a in range(self.game.getActionSize())]
-
-        if temp==0:
-            bestA = np.argmax(counts)
-            probs = [0]*len(counts)
-            probs[bestA]=1
-            return probs
-
-        counts = [x**(1./temp) for x in counts]
-        probs = [x/float(sum(counts)) for x in counts]
-        return probs
 
     def startMCTS(self, canonicalBoard, depth=0):
         self._mcts_eval_state = copy.deepcopy(canonicalBoard)
@@ -109,7 +52,7 @@ class MCTS():
             self._mcts_thread[i].start()
         return True
 
-    def stopMCTS(self, temp=1):
+    def stopMCTS(self, temp=0):
         if not self._run_mcts:
             return False
         self._run_mcts = False
@@ -148,17 +91,23 @@ class MCTS():
         else:
             self.startMCTS(canonicalBoard)
 
-    def eval_time(self, canonicalBoard):
+    def eval_time(self, canonicalBoard, delta_time = 0):
         time = canonicalBoard.time_remaining
         self.data.lock.acquire()
-        moves, value = self.nnet.predict(canonicalBoard)
+        # moves, value = self.nnet.predict(canonicalBoard.matrice_stack)
         self.data.lock.release()
         # ToDo a good formula for time
-        time = 0.2
+        time = 0.75 - delta_time
         return time
 
     def has_finished(self):
-        return time.time() <= (self._mcts_start_time + self._mcts_delta_time)
+        if self._run_mcts:
+            return time.time() >= (self._mcts_start_time + self._mcts_delta_time)
+        else:
+            return False
+
+    def is_running(self):
+        return self._run_mcts
 
 
     def _thread_getActionProb_seq(self, thread_id, canonicalBoard, depth=0):
@@ -171,7 +120,6 @@ class MCTS():
             game_copy.setState(canonicalBoard)
             search_mcts(canonicalBoard, self.data, game_copy, self.nnet, depth)
             counter += 1
-        # print(counter)
         self.lock.acquire()
         self._mcts_finished[thread_id] = True
         self.lock.release()
@@ -209,7 +157,7 @@ def search_mcts(canonicalBoard, data: MCTSData, game, nnet, depth = 2):
         # leaf node
         valids = game.getValidMoves(canonicalBoard, 1)
         data.lock.acquire()
-        data.Ps[s], v = nnet.predict(canonicalBoard)
+        data.Ps[s], v = nnet.predict(canonicalBoard.matrice_stack)
         # v = simplified_value_fct(canonicalBoard)
         data.Ps[s] = data.Ps[s]*valids      # masking invalid moves
         sum_Ps_s = np.sum(data.Ps[s])
@@ -299,7 +247,7 @@ def search_mcts_seq(canonicalBoard, data: MCTSData, game, nnet, depth = 2):
     if s not in data.Ps:
         # leaf node
         valids = game.getValidMoves(canonicalBoard, 1)
-        data.Ps[s], v = nnet.predict(canonicalBoard)
+        data.Ps[s], v = nnet.predict(canonicalBoard.matrice_stack)
         data.Ps[s] = data.Ps[s]*valids      # masking invalid moves
         sum_Ps_s = np.sum(data.Ps[s])
         if sum_Ps_s > 0:

@@ -10,14 +10,12 @@ from bughouse.BughouseEnv import BughouseEnv
 class BugHouseGame(Game):
     # we although in the base class everything works with board and we inherit the names
     # but we are using state instead of board
-    def __init__(self):
+    def __init__(self, board=constants.BOTTOM, team=constants.LEFT):
         Game.__init__(self)
-        self.environment = BughouseEnv(0, 0)
+        self.environment = BughouseEnv(board, team)
 
     def getInitBoard(self):
-        self.environment = BughouseEnv(0, 0)
-        state = self.environment.get_board_state()
-        return state
+        return self.environment.get_board_state()
 
     def getBoardSize(self):
         return (12, 16, 8)  #
@@ -33,12 +31,19 @@ class BugHouseGame(Game):
             if elem == actionString:
                 return counter
 
-    def getNextState(self, player, action, state=None):
+    def getNextState(self, player, action, state=None, play_other_board = False, boardView = False):
+        state = None
         if state is not None:
             self.environment.load_state(state)
-        state = self.environment(constants.LABELS[action])
-        # print(f'{action}: {constants.LABELS[action]}')
-        return state, -player
+        if play_other_board is False:
+            return self.environment(constants.LABELS[action]), -player
+        else:
+            self.environment.push(constants.LABELS[action], 0, int(not self.environment.board))
+            if boardView:
+                state = self.environment.get_board_state()
+            else:
+                state = self.environment.get_state()
+            return state, player
 
     def setState(self, state):
         self.environment.load_state(state)
@@ -61,7 +66,7 @@ class BugHouseGame(Game):
                 return -1
             else:
                 raise ValueError('Unexpected winstate found: ', winstate)
-            return 0
+        return 0
 
     def getCanonicalForm(self, state, player):
         return state

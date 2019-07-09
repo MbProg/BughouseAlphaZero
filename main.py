@@ -67,15 +67,22 @@ args = dotdict({
 
 })
 
+from threading import Thread
+from WebSocketGameClient import WebSocketGameClient
+import time
+
 if __name__=="__main__":
     # g = Game(6)
     # nnet = nn(g)
 
     g = Game()
-    nnet = nn(g)
+    nnet = nn(g, b_randomNet=True)
     b = BugHouseArena(g,nnet,args,display)
+    b.playAgainstServer(random=True)
+
+
+    #b = BugHouseArena(g,nnet,args,display)
     # b.playGame()
-    b.playAgainstServer()
     # if args.load_model:
     #     nnet.load_checkpoint(args.load_folder_file[0], args.load_folder_file[1])
 
