@@ -47,6 +47,9 @@ class BugHouseNet():
 
         global graph
         graph = tf.get_default_graph()
+
+        # a prediction because first is always very slow
+        self.predict(np.random.rand(self.inp_shape[0],self.inp_shape[1],self.inp_shape[2]))
         # dataTest = np.load('data.npy')
         # p,v = self.model.predict(dataTest)
         # print(p,v)

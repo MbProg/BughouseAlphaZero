@@ -75,11 +75,15 @@ if __name__=="__main__":
     # g = Game(6)
     # nnet = nn(g)
 
+    # g = Game()
+    # nnet = nn(g, b_randomNet=False)
+    # b = BugHouseArena(g,nnet,args,display)
+    # b.playAgainstServer(random=False)
+
     g = Game()
-    nnet = nn(g, b_randomNet=False)
+    nnet = nn(g, b_randomNet=True)
     b = BugHouseArena(g,nnet,args,display)
     b.playAgainstServer(random=True)
-
 
     #b = BugHouseArena(g,nnet,args,display)
     # b.playGame()
