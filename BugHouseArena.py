@@ -63,11 +63,13 @@ class BugHouseArena(Arena):
                 time_remaining = start_time - time.time() - delay
                 action = self.game.getActionNumber(wsgc.pop_my_stack())
                 state, curPlayer = self.game.getNextState(curPlayer, action)
+                print(state._fen[0], state._fen[1])
 
             if wsgc.check_partner_stack():
                 time_remaining = start_time - time.time() - delay
                 action = self.game.getActionNumber(wsgc.pop_partner_stack())
                 state, curPlayer = self.game.getNextState(curPlayer, action, play_other_board=True)
+                print(state._fen[0], state._fen[1])
                 if self.mcts.is_running():
                     print("eval_new_State")
                     self.mcts.eval_new_state(state)
@@ -79,8 +81,8 @@ class BugHouseArena(Arena):
                 # time.sleep(0.2)
 
             if wsgc.my_turn and self.mcts.has_finished() and not wsgc.check_partner_stack():
-                actions = self.mcts.stopMCTS(temp=0.2)
-                # action = np.argmax(actions)
+                actions = self.mcts.stopMCTS(temp=0.0)
+                action = np.argmax(actions)
                 # ToDo add drawing and change temp for more random
                 if random:
                     actions = self.game.getValidMoves(self.game.getCanonicalForm(state, curPlayer), curPlayer)
@@ -95,6 +97,7 @@ class BugHouseArena(Arena):
                     assert valids[action] > 0
                 state, curPlayer = self.game.getNextState(curPlayer, action, state)
                 wsgc.send_action(self.game.getActionString(action))
+                print(state._fen[0],state._fen[1])
                 time_remaining = start_time - time.time() - delay
 
     def playGame(self, verbose=False):

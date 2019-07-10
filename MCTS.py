@@ -97,7 +97,7 @@ class MCTS():
         # moves, value = self.nnet.predict(canonicalBoard.matrice_stack)
         self.data.lock.release()
         # ToDo a good formula for time
-        time = 0.75 - delta_time
+        time = 3 - delta_time
         return time
 
     def has_finished(self):
