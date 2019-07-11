@@ -25,6 +25,7 @@ class WebSocketGameClient():
             print(">> Message from server: ", message)
             self.message_log.append(message)
             if not self.game_started:
+                print(">> Message from server: ", message)
                 if message == 'protover 4':
                     self.ws.send('feature san=1, time=1, variants="bughouse", otherboard=1, myname="debug_engine", colors=1, time=1, done=1')
                     print("Connecttion to BugHouseGame Server established.")
