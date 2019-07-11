@@ -49,7 +49,7 @@ class BugHouseNet():
         graph = tf.get_default_graph()
 
         # a prediction because first is always very slow
-        self.predict(np.random.rand(self.inp_shape[0],self.inp_shape[1],self.inp_shape[2]))
+        self.predict(np.random.rand(1, self.inp_shape[0],self.inp_shape[1],self.inp_shape[2]))
         # dataTest = np.load('data.npy')
         # p,v = self.model.predict(dataTest)
         # print(p,v)
@@ -146,8 +146,8 @@ class BugHouseNet():
         Input: numpy array with shape (1, shape of state) e.g. (1, 60, 8 , 8)
                 should be channel_first
         """
-        data = data[0][np.newaxis, :, :]
-        random_data = np.random.rand(1,60,8,8)
+        # data = data[0][np.newaxis, :, :]
+        # random_data = np.random.rand(1,60,8,8)
         # data = np.float32(data)
         with graph.as_default():
             pi, v = self.model.predict(data)      
