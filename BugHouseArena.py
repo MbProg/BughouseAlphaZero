@@ -90,7 +90,7 @@ class BugHouseArena(Arena):
                     action = choice(np.arange(len(actions)), 1, p=(actions/actions.sum()))[0]
                 else:
                     if self.args.mctsTmpDepth < (half_turn * 2):
-                        actions = self.mcts.stopMCTS(temp=self.args.mctsTmp)
+                        actions = np.asarray(self.mcts.stopMCTS(temp=self.args.mctsTmp))
                         action = choice(np.arange(len(actions)), 1, p=(actions / actions.sum()))[0]
                     else:
                         actions = self.mcts.stopMCTS(temp=0)
