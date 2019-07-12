@@ -10,12 +10,12 @@ from bughouse.BughouseEnv import BughouseEnv
 class BugHouseGame(Game):
     # we although in the base class everything works with board and we inherit the names
     # but we are using state instead of board
-    def __init__(self, board=constants.BOTTOM, team=constants.LEFT):
+    def __init__(self, board=constants.BOTTOM, team=constants.LEFT, max_time=300):
         Game.__init__(self)
-        self.environment = BughouseEnv(board, team)
+        self.environment = BughouseEnv(board, team, max_time)
 
-    def getInitBoard(self):
-        return self.environment.get_board_state()
+    def getInitBoard(self, build_matrices=True):
+        return self.environment.get_board_state(build_matrices=build_matrices)
 
     def getBoardSize(self):
         return (12, 16, 8)  #
@@ -31,19 +31,30 @@ class BugHouseGame(Game):
             if elem == actionString:
                 return counter
 
-    def getNextState(self, player, action, state=None, play_other_board = False, boardView = False):
+    def getNextState(self, player, action, state=None, play_other_board = False, boardView = False, time=None, build_matrices=True):
         state = None
         if state is not None:
             self.environment.load_state(state)
         if play_other_board is False:
-            return self.environment(constants.LABELS[action]), -player
+            if time is not None:
+                self.environment.set_time_remaining(time, self.environment.board)
+            state = self.environment(constants.LABELS[action])
+            return state, -player
         else:
+            if time is not None:
+                self.environment.set_time_remaining(time, int(not self.environment.board))
             self.environment.push(constants.LABELS[action], 0, int(not self.environment.board))
             if boardView:
-                state = self.environment.get_board_state()
+                state = self.environment.get_board_state(build_matrices=build_matrices)
             else:
-                state = self.environment.get_state()
+                state = self.environment.get_state(build_matrices=build_matrices)
             return state, player
+
+    def getCurrentBoardState(self, build_matrices=True):
+        return self.environment.get_board_state(build_matrices=build_matrices)
+        if state is not None:
+            self.environment.load_state(state)
+
 
     def setState(self, state):
         self.environment.load_state(state)
@@ -89,7 +100,6 @@ def printBughouse(agent):
 
 
 def display(state):
-    agent = BughouseEnv(0, 0)
     agent.load_state(state)
 
     print(" -----------------------")

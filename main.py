@@ -49,16 +49,22 @@ from BugHouseArena import BugHouseArena
 from utils import *
 from bughouse.BugHouseGame import display as display
 import sys
-sys.setrecursionlimit(400000)
 args = dotdict({
+    'cpuct': 1,
+    'mctsTmp' : 0,
+    'mctsTmpDepth' : 4,
+    'mctsValueInit' : -0.1,
+    'restart_cutoff' : 0.75,
+    'network_only' : False,
+
+
     'numIters': 1,
     'numEps': 10,
     'tempThreshold': 15,
     'updateThreshold': 0.6,
     'maxlenOfQueue': 200000,
-    'numMCTSSims': 25,
     'arenaCompare': 40,
-    'cpuct': 1,
+
 
     'checkpoint': './temp/',
     'load_model': False,
@@ -74,7 +80,7 @@ import time
 if __name__=="__main__":
     # g = Game(6)
     # nnet = nn(g)
-
+    #
     # g = Game()
     # nnet = nn(g, b_randomNet=False)
     # b = BugHouseArena(g,nnet,args,display)

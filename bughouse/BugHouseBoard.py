@@ -275,6 +275,60 @@ class _BughouseBoard(chess.variant.CrazyhouseBoard):
             return np.flip(np.flip(board_state_game, 0), 1)
         return board_state_game
 
+    def print_board(self, flip: bool):
+        print_board = np.full((8,8),'♙')
+        rank = 0
+        file = 0
+        for square in chess.SQUARES_180:
+            fig = '_'
+            mask = chess.BB_SQUARES[square]
+            if not self.occupied & mask:
+                fig = '_'
+            elif self.pawns & mask:
+                color = bool(self.occupied_co[chess.WHITE] & mask)
+                if color:
+                    fig = '♙'
+                else:
+                    fig = '♟'
+            elif self.knights & mask:
+                color = bool(self.occupied_co[chess.WHITE] & mask)
+                if color:
+                    fig = '♘'
+                else:
+                    fig = '♞'
+            elif self.bishops & mask:
+                color = bool(self.occupied_co[chess.WHITE] & mask)
+                if color:
+                    fig = '♗'
+                else:
+                    fig = '♝'
+            elif self.rooks & mask:
+                color = bool(self.occupied_co[chess.WHITE] & mask)
+                if color:
+                    fig = '♖'
+                else:
+                    fig = '♜'
+            elif self.queens & mask:
+                color = bool(self.occupied_co[chess.WHITE] & mask)
+                if color:
+                    fig = '♕'
+                else:
+                    fig = '♛'
+            elif self.kings & mask:
+                color = bool(self.occupied_co[chess.WHITE] & mask)
+                if color:
+                    fig = '♔'
+                else:
+                    fig = '♚'
+            print_board[rank, file] = fig
+            file  += 1
+            if file >= 8:
+                file = 0
+                rank += 1
+        if flip:
+            return np.flip(np.flip(print_board, 0), 1)
+        return print_board
+
     def fifty_moves_rule(self):
         return True if self.halfmove_clock >= 50 else False
 

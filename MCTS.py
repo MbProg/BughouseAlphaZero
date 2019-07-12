@@ -23,7 +23,7 @@ class MCTSData():
         self.lock = threading.Lock()
 
 class MCTS():
-    AVAILABLE_CORES = 2
+    AVAILABLE_CORES =  1
 
     def __init__(self, game, nnet, args):
         self.args = args
@@ -39,15 +39,20 @@ class MCTS():
         self._mcts_delta_time = -1.
         self.lock = threading.Lock()
 
-    def startMCTS(self, canonicalBoard, depth=0):
+    def startMCTS(self, canonicalBoard, new_time_remaining = None):
         self._mcts_eval_state = copy.deepcopy(canonicalBoard)
         self.game.setState(self._mcts_eval_state)
         self._mcts_start_time = time.time()
-        self._mcts_delta_time = self.eval_time(self._mcts_eval_state)
+        if self.args.network_only:
+            self._mcts_delta_time = 0.0001
+            self._run_mcts = True
+            return True
+
+        self._mcts_delta_time = self.eval_time(self._mcts_eval_state, new_time_remaining)
         self._run_mcts = True
         for i in range(self.AVAILABLE_CORES):
             self._mcts_thread[i] = threading.Thread(target=self._thread_getActionProb_seq,
-                                                    kwargs={'thread_id': i, 'canonicalBoard': self._mcts_eval_state, 'depth': depth})
+                                                    kwargs={'thread_id': i, 'canonicalBoard': self._mcts_eval_state})
             self._mcts_thread[i].daemon = True
             self._mcts_thread[i].start()
         return True
@@ -56,6 +61,16 @@ class MCTS():
         if not self._run_mcts:
             return False
         self._run_mcts = False
+        if self.args.network_only:
+            valids = self.game.getValidMoves(self._mcts_eval_state, 1)
+            matrices = self._mcts_eval_state.matrice_stack
+            self.data.lock.acquire()
+            Ps, v = self.nnet.predict(matrices)
+            self.data.lock.release()
+            Ps = Ps * valids
+            self._mcts_probs = Ps
+            self._mcts_finished = [True] * self.AVAILABLE_CORES
+            return self._mcts_probs
         if not any(self._mcts_finished):
             for i in range(self.AVAILABLE_CORES):
                 self._mcts_thread[i].join()
@@ -75,7 +90,7 @@ class MCTS():
         self._mcts_finished = [True] * self.AVAILABLE_CORES
         return self._mcts_probs
 
-    def eval_new_state(self, canonicalBoard):
+    def eval_new_state(self, canonicalBoard, new_time_remaining):
         if self._mcts_eval_state is not None:
             valids = self.game.getValidMoves(self._mcts_eval_state, 1)
             self.game.setState(canonicalBoard)
@@ -86,19 +101,32 @@ class MCTS():
                 #  We may want to reevaluate the time
                 return
             else:
-                self.stopMCTS()
-                self.startMCTS(canonicalBoard)
+
+                if (time.time() - self._mcts_start_time)  < (self._mcts_delta_time*self.args.restart_cutoff):
+                    self.stopMCTS()
+                    self.startMCTS(canonicalBoard, new_time_remaining)
         else:
             self.startMCTS(canonicalBoard)
 
-    def eval_time(self, canonicalBoard, delta_time = 0):
-        time = canonicalBoard.time_remaining
-        self.data.lock.acquire()
-        # moves, value = self.nnet.predict(canonicalBoard.matrice_stack)
-        self.data.lock.release()
-        # ToDo a good formula for time
-        time = 3 - delta_time
-        return time
+    def eval_time(self, canonicalBoard, new_time_remaining = None):
+        MAX_TIME = self.game.environment.max_time
+        my_fen = self.game.stringRepresentation(canonicalBoard)
+        f_moves = int(my_fen.rsplit(" ", 1)[-1])
+        if f_moves <= 4:
+            return 1
+
+        if f_moves <= 30:
+            return (MAX_TIME-44)/26.0
+
+        board = canonicalBoard.board
+        team = canonicalBoard.team
+        if new_time_remaining is not None:
+            my_time = new_time_remaining
+        else:
+            my_time = canonicalBoard.time_remaining[team, board]
+
+        return my_time-canonicalBoard.time_remaining[int(not team), board]
+
 
     def has_finished(self):
         if self._run_mcts:
@@ -110,7 +138,7 @@ class MCTS():
         return self._run_mcts
 
 
-    def _thread_getActionProb_seq(self, thread_id, canonicalBoard, depth=0):
+    def _thread_getActionProb_seq(self, thread_id, canonicalBoard):
         self.lock.acquire()
         self._mcts_finished[thread_id] = False
         self.lock.release()
@@ -118,14 +146,14 @@ class MCTS():
         game_copy = copy.deepcopy(self.game)
         while self._run_mcts:
             game_copy.setState(canonicalBoard)
-            search_mcts(canonicalBoard, self.data, game_copy, self.nnet, depth)
+            search_mcts(canonicalBoard, self.data, game_copy, self.nnet)
             counter += 1
         self.lock.acquire()
         self._mcts_finished[thread_id] = True
         self.lock.release()
         return True
 
-def search_mcts(canonicalBoard, data: MCTSData, game, nnet, depth = 2):
+def search_mcts(canonicalBoard, data: MCTSData, game, nnet):
     """
     This function performs one iteration of MCTS. It is recursively called
     till a leaf node is found. The action chosen at each node is one that
@@ -153,11 +181,16 @@ def search_mcts(canonicalBoard, data: MCTSData, game, nnet, depth = 2):
         # terminal node
         return -data.Es[s]
 
+
     if s not in data.Ps:
         # leaf node
         valids = game.getValidMoves(canonicalBoard, 1)
+        matrices = canonicalBoard.matrice_stack
+        # matrices = game.getCurrentBoardState(True)
         data.lock.acquire()
-        data.Ps[s], v = nnet.predict(canonicalBoard.matrice_stack)
+        t = time.time()
+        data.Ps[s], v = nnet.predict(matrices)
+        # print("expand", time.time()-t)
         # v = simplified_value_fct(canonicalBoard)
         data.Ps[s] = data.Ps[s]*valids      # masking invalid moves
         sum_Ps_s = np.sum(data.Ps[s])
@@ -175,10 +208,7 @@ def search_mcts(canonicalBoard, data: MCTSData, game, nnet, depth = 2):
         data.Vs[s] = valids
         data.Ns[s] = 0
         data.lock.release()
-        if depth <= 0:
-            return -v
-        else:
-            depth = depth - 1
+        return -v
 
     data.lock.acquire()
     valids = data.Vs[s]
@@ -192,16 +222,16 @@ def search_mcts(canonicalBoard, data: MCTSData, game, nnet, depth = 2):
             if (s,a) in data.Qsa:
                 u = data.Qsa[(s,a)] + data.args.cpuct*data.Ps[s][a]*math.sqrt(data.Ns[s])/(1+data.Nsa[(s,a)])
             else:
-                u = data.args.cpuct*data.Ps[s][a]*math.sqrt(data.Ns[s] + EPS)     # Q = 0 ?
+                u = data.args.mctsValueInit + data.args.cpuct*data.Ps[s][a]*math.sqrt(data.Ns[s] + EPS)     # Q = 0 ?
 
             if u > cur_best:
                 cur_best = u
                 best_act = a
 
     a = best_act
-    next_s, next_player = game.getNextState(1, a)
+    next_s, next_player = game.getNextState(1, a, build_matrices=False)
     next_s = game.getCanonicalForm(next_s, next_player)
-    v = search_mcts(next_s, data, game, nnet, depth)
+    v = search_mcts(next_s, data, game, nnet)
     data.lock.acquire()
     if (s,a) in data.Qsa:
         data.Qsa[(s,a)] = (data.Nsa[(s,a)]*data.Qsa[(s,a)] + v)/(data.Nsa[(s,a)]+1)
@@ -213,90 +243,6 @@ def search_mcts(canonicalBoard, data: MCTSData, game, nnet, depth = 2):
 
     data.Ns[s] += 1
     data.lock.release()
-    return -v
-
-def search_mcts_seq(canonicalBoard, data: MCTSData, game, nnet, depth = 2):
-    """
-    This function performs one iteration of MCTS. It is recursively called
-    till a leaf node is found. The action chosen at each node is one that
-    has the maximum upper confidence bound as in the paper.
-
-    Once a leaf node is found, the neural network is called to return an
-    initial policy P and a value v for the state. This value is propogated
-    up the search path. In case the leaf node is a terminal state, the
-    outcome is propogated up the search path. The values of Ns, Nsa, Qsa are
-    updated.
-
-    NOTE: the return values are the negative of the value of the current
-    state. This is done since v is in [-1,1] and if v is the value of a
-    state for the current player, then its value is -v for the other player.
-
-    Returns:
-        v: the negative of the value of the current canonicalBoard
-    """
-
-
-    s = game.stringRepresentation(canonicalBoard)
-
-    if s not in data.Es:
-        data.Es[s] = game.getGameEnded(canonicalBoard, 1)
-    if data.Es[s]!=0:
-        # terminal node
-        return -data.Es[s]
-
-    if s not in data.Ps:
-        # leaf node
-        valids = game.getValidMoves(canonicalBoard, 1)
-        data.Ps[s], v = nnet.predict(canonicalBoard.matrice_stack)
-        data.Ps[s] = data.Ps[s]*valids      # masking invalid moves
-        sum_Ps_s = np.sum(data.Ps[s])
-        if sum_Ps_s > 0:
-            data.Ps[s] /= sum_Ps_s    # renormalize
-        else:
-            # if all valid moves were masked make all valid moves equally probable
-
-            # NB! All valid moves may be masked if either your NNet architecture is insufficient or you've get overfitting or something else.
-            # If you have got dozens or hundreds of these messages you should pay attention to your NNet and/or training process.
-            print("All valid moves were masked, do workaround.")
-            data.Ps[s] = data.Ps[s] + valids
-            data.Ps[s] /= np.sum(data.Ps[s])
-
-        data.Vs[s] = valids
-        data.Ns[s] = 0
-        if depth <= 0:
-            return -v
-        else:
-            depth = depth - 1
-
-    valids = data.Vs[s]
-    cur_best = -float('inf')
-    best_act = -1
-
-    # pick the action with the highest upper confidence bound
-    for a in range(game.getActionSize()):
-        if valids[a]:
-            if (s,a) in data.Qsa:
-                u = data.Qsa[(s,a)] + data.args.cpuct*data.Ps[s][a]*math.sqrt(data.Ns[s])/(1+data.Nsa[(s,a)])
-            else:
-                u = data.args.cpuct*data.Ps[s][a]*math.sqrt(data.Ns[s] + EPS)     # Q = 0 ?
-
-            if u > cur_best:
-                cur_best = u
-                best_act = a
-
-    a = best_act
-    next_s, next_player = game.getNextState(1, a)
-    next_s = game.getCanonicalForm(next_s, next_player)
-    v = search_mcts(next_s, data, game, nnet, depth)
-    if (s,a) in data.Qsa:
-        data.Qsa[(s,a)] = (data.Nsa[(s,a)]*data.Qsa[(s,a)] + v)/(data.Nsa[(s,a)]+1)
-        data.Nsa[(s,a)] += 1
-
-    else:
-        data.Qsa[(s,a)] = v
-        data.Nsa[(s,a)] = 1
-
-    data.Ns[s] += 1
     return -v
 
 def prune_mcts_data(data: MCTSData, max_depth = 4):
