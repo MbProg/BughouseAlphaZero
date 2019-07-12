@@ -124,8 +124,10 @@ class MCTS():
             my_time = new_time_remaining
         else:
             my_time = canonicalBoard.time_remaining[team, board]
-
-        return my_time-canonicalBoard.time_remaining[int(not team), board]
+        ret_time = my_time-canonicalBoard.time_remaining[int(not team), board]
+        if ret_time < 0.25:
+            return 0.25
+        return ret_time
 
 
     def has_finished(self):
