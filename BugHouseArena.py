@@ -85,17 +85,16 @@ class BugHouseArena(Arena):
 
             if wsgc.my_turn and self.mcts.has_finished() and not wsgc.check_partner_stack():
                 action = None
-                if self.args.mctsTmpDepth < (half_turn*2):
-                    actions = self.mcts.stopMCTS(temp=self.args.mctsTmp)
-                    action = choice(np.arange(len(actions)), 1, p=(actions / actions.sum()))[0]
-                else:
-                    actions = self.mcts.stopMCTS(temp=0)
-                    action = np.argmax(actions)
-                print("action", action)
-                # ToDo add drawing and change temp for more random
                 if random:
                     actions = self.game.getValidMoves(self.game.getCanonicalForm(state, curPlayer), curPlayer)
                     action = choice(np.arange(len(actions)), 1, p=(actions/actions.sum()))[0]
+                else:
+                    if self.args.mctsTmpDepth < (half_turn * 2):
+                        actions = self.mcts.stopMCTS(temp=self.args.mctsTmp)
+                        action = choice(np.arange(len(actions)), 1, p=(actions / actions.sum()))[0]
+                    else:
+                        actions = self.mcts.stopMCTS(temp=0)
+                        action = np.argmax(actions)
                 valids = self.game.getValidMoves(self.game.getCanonicalForm(state, curPlayer), curPlayer)
                 if valids[action] == 0:
                     print(action)
