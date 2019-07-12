@@ -10,9 +10,9 @@ from bughouse.BughouseEnv import BughouseEnv
 class BugHouseGame(Game):
     # we although in the base class everything works with board and we inherit the names
     # but we are using state instead of board
-    def __init__(self, board=constants.BOTTOM, team=constants.LEFT):
+    def __init__(self, board=constants.BOTTOM, team=constants.LEFT, max_time=300):
         Game.__init__(self)
-        self.environment = BughouseEnv(board, team)
+        self.environment = BughouseEnv(board, team, max_time)
 
     def getInitBoard(self, build_matrices=True):
         return self.environment.get_board_state(build_matrices=build_matrices)
@@ -100,7 +100,6 @@ def printBughouse(agent):
 
 
 def display(state):
-    agent = BughouseEnv(0, 0)
     agent.load_state(state)
 
     print(" -----------------------")

@@ -43,7 +43,7 @@ class BugHouseArena(Arena):
         wsgc = WebSocketGameClient()
         curPlayer = 1
         delay = 0.001
-        timefactor = 100
+        timefactor = 100.0
         connection_thread = threading.Thread(target=wsgc.connect)
         connection_thread.daemon = True
         connection_thread.start()
@@ -55,7 +55,7 @@ class BugHouseArena(Arena):
             pass
         start_time = time.time()
         time_remaining = None
-        self.game = BugHouseGame(wsgc.my_team, wsgc.my_board)
+        self.game = BugHouseGame(wsgc.my_team, wsgc.my_board, wsgc.max_time/timefactor)
         self.mcts = MCTS(self.game, self.nnet, self.args)
         state = self.game.getInitBoard()
         while wsgc.game_started == True:

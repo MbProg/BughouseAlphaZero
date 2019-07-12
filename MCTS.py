@@ -109,7 +109,7 @@ class MCTS():
             self.startMCTS(canonicalBoard)
 
     def eval_time(self, canonicalBoard, new_time_remaining = None):
-        MAX_TIME = 300.0
+        MAX_TIME = self.game.environment.max_time
         my_fen = self.game.stringRepresentation(canonicalBoard)
         f_moves = int(my_fen.rsplit(" ", 1)[-1])
         if f_moves <= 4:
@@ -146,9 +146,7 @@ class MCTS():
         game_copy = copy.deepcopy(self.game)
         while self._run_mcts:
             game_copy.setState(canonicalBoard)
-            t = time.time()
             search_mcts(canonicalBoard, self.data, game_copy, self.nnet)
-            print("T1: ", time.time() - t)
             counter += 1
         self.lock.acquire()
         self._mcts_finished[thread_id] = True
@@ -224,7 +222,7 @@ def search_mcts(canonicalBoard, data: MCTSData, game, nnet):
             if (s,a) in data.Qsa:
                 u = data.Qsa[(s,a)] + data.args.cpuct*data.Ps[s][a]*math.sqrt(data.Ns[s])/(1+data.Nsa[(s,a)])
             else:
-                u = data.args.cpuct*data.Ps[s][a]*math.sqrt(data.Ns[s] + EPS)     # Q = 0 ?
+                u = data.args.mctsValueInit + data.args.cpuct*data.Ps[s][a]*math.sqrt(data.Ns[s] + EPS)     # Q = 0 ?
 
             if u > cur_best:
                 cur_best = u

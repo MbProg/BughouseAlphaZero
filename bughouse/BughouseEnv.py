@@ -34,17 +34,18 @@ class BughouseEnv():
 
     TEAMS = [BOTTOM, TOP] = [TEAM_A, TEAM_B] = [0, 1]
     BOARDS = [LEFT, RIGHT] = [BOARD_A, BOARD_B] = [0, 1]
-    MAX_TIME = 300.0 # In Seconds
+    MAXIMIUM_TIME_INIT = 300.0 # In Seconds
 
 
-    def __init__(self, team=0, board=0):
+    def __init__(self, team=0, board=0, max_time = MAXIMIUM_TIME_INIT):
+        self.max_time = max_time
         self.legal_moves = dict.fromkeys(constants.LABELS, 0)
         self.team = team
         self.board = board
         self.last_board_moved = board
         self.color = (team == board)  # Bottom left (00) is White(1) same as Top Right (11)
         self.boards = BughouseBoards()
-        self.time_remaining = np.full((2, 2), self.MAX_TIME)  # (Teams, Boards)
+        self.time_remaining = np.full((2, 2), self.max_time)  # (Teams, Boards)
 
     def __call__(self, action) -> BughouseState:
         return self.propapagete_board(action)
@@ -74,7 +75,6 @@ class BughouseEnv():
         player_color = self.boards.boards[board].turn
         team = self.get_team(player_color, board)
         _fen = self.boards.fen()
-        self.time_remaining = np.full((2, 2), self.MAX_TIME) # (Teams, Boards)
         if build_matrices:
             return BughouseState(self.boards.to_numpy(self.board), time, team, board, _fen)
         else:
@@ -182,7 +182,7 @@ class BughouseEnv():
 
     def reset(self):
         self.boards.reset_boards() #Reset Board
-        self.time_remaining = np.full((2, 2), self.MAX_TIME) #  Reset Time
+        self.time_remaining = np.full((2, 2), self.max_time) #  Reset Time
 
     def get_player_color(self,player, board):
         return int(player == board)

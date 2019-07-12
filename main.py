@@ -53,8 +53,10 @@ args = dotdict({
     'cpuct': 1,
     'mctsTmp' : 0,
     'mctsTmpDepth' : 4,
+    'mctsValueInit' : -0.1,
     'restart_cutoff' : 0.75,
-    'network_only' : True,
+    'network_only' : False,
+
 
     'numIters': 1,
     'numEps': 10,
