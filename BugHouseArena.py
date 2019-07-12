@@ -47,6 +47,7 @@ class BugHouseArena(Arena):
         connection_thread = threading.Thread(target=wsgc.connect)
         connection_thread.daemon = True
         connection_thread.start()
+        half_turn = 0
         # Waiting for Connection
         while wsgc.connected == False:
             pass
@@ -63,13 +64,14 @@ class BugHouseArena(Arena):
                 time_remaining = (wsgc.max_time/timefactor) - (time.time() - start_time) - delay
                 action = self.game.getActionNumber(wsgc.pop_my_stack())
                 state, curPlayer = self.game.getNextState(curPlayer, action, time=time_remaining)
+                half_turn += 1
 
 
             if wsgc.check_partner_stack():
                 time_remaining = (wsgc.max_time/timefactor) - (time.time() - start_time) - delay
                 action = self.game.getActionNumber(wsgc.pop_partner_stack())
                 state, curPlayer = self.game.getNextState(curPlayer, action, play_other_board=True, boardView=False, time=time_remaining)
-                # print(state._fen[0], state._fen[1])
+                print(state._fen[0], state._fen[1])
                 if self.mcts.is_running():
                     print("eval_new_State")
                     self.mcts.eval_new_state(state, time_remaining)
@@ -82,8 +84,13 @@ class BugHouseArena(Arena):
                 # time.sleep(0.2)
 
             if wsgc.my_turn and self.mcts.has_finished() and not wsgc.check_partner_stack():
-                actions = self.mcts.stopMCTS(temp=0.0)
-                action = np.argmax(actions)
+                action = None
+                if self.args.mctsTmpDepth < (half_turn*2):
+                    actions = self.mcts.stopMCTS(temp=self.args.mctsTmp)
+                    action = choice(np.arange(len(actions)), 1, p=(actions / actions.sum()))[0]
+                else:
+                    actions = self.mcts.stopMCTS(temp=0)
+                    action = np.argmax(actions)
                 print("action", action)
                 # ToDo add drawing and change temp for more random
                 if random:
@@ -106,6 +113,7 @@ class BugHouseArena(Arena):
                 # print("HAAHAAdasd")
                 # print(state.time_remaining, time_remaining)
                 wsgc.send_action(self.game.getActionString(action))
+                half_turn += 1
                 # print(state._fen[0],state._fen[1])
                 # print(self.game.environment.boards.boards[wsgc.my_board].print_board(flip=False))
 
