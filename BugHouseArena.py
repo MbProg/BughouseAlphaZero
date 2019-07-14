@@ -42,7 +42,7 @@ class BugHouseArena(Arena):
 
         wsgc = WebSocketGameClient()
         curPlayer = 1
-        delay = 0.001
+        delay = 0.000
         timefactor = 100.0
         connection_thread = threading.Thread(target=wsgc.connect)
         connection_thread.daemon = True
@@ -55,33 +55,39 @@ class BugHouseArena(Arena):
         while wsgc.game_started == False:
             pass
         start_time = time.time()
-        time_remaining = None
-        self.game = BugHouseGame(wsgc.my_team, wsgc.my_board, wsgc.max_time/timefactor)
+        max_time = (wsgc.max_time/timefactor)
+        my_time_remaining = np.full((2,), max_time) # I am pos 0, oponnent is pos 1
+        other_time_remaining = np.full((2,), max_time) # Postiions doesnt matter only time counter
+        self.game = BugHouseGame(wsgc.my_team, wsgc.my_board, max_time)
         self.mcts = MCTS(self.game, self.nnet, self.args)
         state = self.game.getInitBoard()
+        other_board_toggle = not wsgc.my_turn
         while wsgc.game_started == True:
             if not wsgc.my_turn and wsgc.check_my_stack():
-                time_remaining = (wsgc.max_time/timefactor) - (time.time() - start_time) - delay
+                my_time_remaining[1] = max_time - (time.time() - start_time) - delay + (max_time-my_time_remaining[0])
                 action = self.game.getActionNumber(wsgc.pop_my_stack())
-                state, curPlayer = self.game.getNextState(curPlayer, action, time=time_remaining)
+                state, curPlayer = self.game.getNextState(curPlayer, action, time=my_time_remaining[1])
                 half_turn += 1
 
 
             if wsgc.check_partner_stack():
-                time_remaining = (wsgc.max_time/timefactor) - (time.time() - start_time) - delay
+                other_time_remaining[int(other_board_toggle)] = max_time - (time.time() - start_time) - delay + \
+                                                        (max_time - other_time_remaining[int(not other_board_toggle)])
                 action = self.game.getActionNumber(wsgc.pop_partner_stack())
-                state, curPlayer = self.game.getNextState(curPlayer, action, play_other_board=True, boardView=False, time=time_remaining)
+                state, curPlayer = self.game.getNextState(curPlayer, action, play_other_board=True, boardView=False,
+                                                          time=other_time_remaining[int(other_board_toggle)])
+                other_board_toggle = not other_board_toggle
                 print(state._fen[0], state._fen[1])
                 if self.mcts.is_running():
-                    print("eval_new_State")
-                    self.mcts.eval_new_state(state, time_remaining)
+                    my_time_remaining[0] = max_time - (time.time() - start_time) - delay + (
+                                max_time - my_time_remaining[1])
+                    self.mcts.eval_new_state(state, my_time_remaining[0])
                     time.sleep(0.05)
 
             if wsgc.my_turn and not self.mcts.is_running():
                 if self.game.getValidMoves(self.game.getCanonicalForm(state, curPlayer), curPlayer).sum() >= 1:
                     self.mcts.startMCTS(state)
-                    print("mcts time", self.mcts._mcts_delta_time)
-                # time.sleep(0.2)
+                    time.sleep(0.05)
 
             if wsgc.my_turn and self.mcts.has_finished() and not wsgc.check_partner_stack():
                 action = None
@@ -107,8 +113,8 @@ class BugHouseArena(Arena):
                     print(state._fen[0], state._fen[1])
                     print(self.mcts._mcts_eval_state._fen[0], self.mcts._mcts_eval_state._fen[1])
                     assert valids[action] > 0
-                time_remaining = (wsgc.max_time/timefactor) - (time.time() - start_time) - delay
-                state, curPlayer = self.game.getNextState(curPlayer, action, state, time=time_remaining)
+                my_time_remaining[0] = max_time - (time.time() - start_time) - delay + (max_time - my_time_remaining[1])
+                state, curPlayer = self.game.getNextState(curPlayer, action, state, time=my_time_remaining[0])
                 # print("HAAHAAdasd")
                 # print(state.time_remaining, time_remaining)
                 wsgc.send_action(self.game.getActionString(action))
