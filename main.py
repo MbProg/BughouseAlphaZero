@@ -55,7 +55,7 @@ args = dotdict({
     'mctsTmpDepth' : 4,
     'mctsValueInit' : -0.1,
     'restart_cutoff' : 0.75,
-    'network_only' : False,
+    'network_only' : True,
 
 
     'numIters': 1,
@@ -87,9 +87,9 @@ if __name__=="__main__":
     # b.playAgainstServer(random=False)
 
     g = Game()
-    nnet = nn(g, b_randomNet=False)
+    nnet = nn(g, b_randomNet=True)
     b = BugHouseArena(g,nnet,args,display)
-    b.playAgainstServer(random=False)
+    b.playAgainstServer(random=True)
 
     # g = Game()
     # nnet = nn(g, b_randomNet=True)

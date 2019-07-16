@@ -69,7 +69,7 @@ class BugHouseArena(Arena):
                 time_remaining = (wsgc.max_time/timefactor) - (time.time() - start_time) - delay
                 action = self.game.getActionNumber(wsgc.pop_partner_stack())
                 state, curPlayer = self.game.getNextState(curPlayer, action, play_other_board=True, boardView=False, time=time_remaining)
-                # print(state._fen[0], state._fen[1])
+                print(state._fen[0], state._fen[1])
                 if self.mcts.is_running():
                     print("eval_new_State")
                     self.mcts.eval_new_state(state, time_remaining)
