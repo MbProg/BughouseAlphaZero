@@ -36,15 +36,16 @@ class BugHouseNet():
         self.channel_pos = 'channels_last'
         self.inp_shape = (60, 8, 8)  # TODO: this should be read from the environment
 
-        self.model = self.__getResidualNetwork(self.inp_shape, output_policy=self.CLASSES_LEN)
-        sgd = optimizers.SGD(lr=0.000, momentum=0.9, decay=0.0, nesterov=False)
+        # self.model = self.__getResidualNetwork(self.inp_shape, output_policy=self.CLASSES_LEN)
+        # sgd = optimizers.SGD(lr=0.000, momentum=0.9, decay=0.0, nesterov=False)
 
-        self.model.compile(loss={'policy':'categorical_crossentropy',
-                            'value':'mean_squared_error'}, optimizer=sgd,
-                    metrics={'policy':'accuracy', 'value':[acc_round, acc_sign]}, loss_weights=[0.25,0.75])
+        # self.model.compile(loss={'policy':'categorical_crossentropy',
+        #                     'value':'mean_squared_error'}, optimizer=sgd,
+        #             metrics={'policy':'accuracy', 'value':[acc_round, acc_sign]}, loss_weights=[0.25,0.75])
 
-        self.model.load_weights('finalModel/model-05.hdf5')
-
+        self.model = keras.models.load_model('finalModel/FinalModel05072019.h5',custom_objects={'acc_round': acc_round,'acc_sign':acc_sign})
+        # self.model.load_weights('finalModel/model-05.hdf5')
+        self._evaluate([6001])
         global graph
         graph = tf.get_default_graph()
 
@@ -91,6 +92,32 @@ class BugHouseNet():
 
         return x
 
+    def _evaluate(self, file_ids, dataset_path='dataset/'):
+        x_val, policies_val, values_val = self.__read_files_data(file_ids,path=dataset_path)
+        print(self.model.metrics_names)
+        print(self.model.evaluate(x_val,[policies_val,values_val]))
+
+    def __read_file_data(self,ID, path='dataset/'):
+        import zarr
+        dataset = zarr.group(store=zarr.ZipStore(path + str(ID) +'.zip', mode="r"))
+        X = np.array(dataset['states'])
+        policies = np.array(dataset['policies'])
+        values = np.array(dataset['values'])
+        return X,policies,values
+
+    def __read_files_data(self,IDs, path='dataset/'):
+        X = np.array([])
+        for ID in IDs:
+            if X.size==0:
+                X, policies, values = self.__read_file_data(ID, path)
+                values = np.array(values)
+            else:
+                X_ID, policies_ID, values_ID = self.__read_file_data(ID, path)
+                X = np.concatenate((X,X_ID))
+                policies = np.concatenate((policies, policies_ID))
+                values = np.concatenate((values,np.array(values_ID)))
+        return X,policies,values
+        
     def __getResidualNetwork(self, input_shape, output_value=1, output_policy=2272):
         
         channel_pos = 'channels_first'
