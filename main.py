@@ -38,17 +38,11 @@
 
 
 #------------------------------------------------------
-from Coach import Coach
-# from othello.OthelloGame import OthelloGame as Game
-# from connect4.Connect4Game import Connect4Game as Game
-# from connect4.tensorflow.NNet import NNetWrapper as nn
-# from othello.pytorch.NNet import NNetWrapper as nn
 from bughouse.BugHouseGame import BugHouseGame as Game
 from bughouse.keras.NNet import NNetWrapper as nn
 from BugHouseArena import BugHouseArena
 from utils import *
 from bughouse.BugHouseGame import display as display
-import sys
 args = dotdict({
     'cpuct': 1,
     'mctsTmp' : 0,
@@ -73,10 +67,6 @@ args = dotdict({
 
 })
 
-from threading import Thread
-from WebSocketGameClient import WebSocketGameClient
-import time
-
 if __name__=="__main__":
     # g = Game(6)
     # nnet = nn(g)
@@ -87,9 +77,9 @@ if __name__=="__main__":
     # b.playAgainstServer(random=False)
 
     g = Game()
-    nnet = nn(g, b_randomNet=False)
+    nnet = nn(g, b_randomNet=True)
     b = BugHouseArena(g,nnet,args,display)
-    b.playAgainstServer(random=False)
+    b.playAgainstServer(random=True)
 
     # g = Game()
     # nnet = nn(g, b_randomNet=True)

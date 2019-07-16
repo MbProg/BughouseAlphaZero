@@ -44,7 +44,7 @@ class MCTS():
         self.game.setState(self._mcts_eval_state)
         self._mcts_start_time = time.time()
         if self.args.network_only:
-            self._mcts_delta_time = 0.0001
+            self._mcts_delta_time = 0.001
             self._run_mcts = True
             return True
 
@@ -76,7 +76,7 @@ class MCTS():
                 self._mcts_thread[i].join()
         s = self.game.stringRepresentation(self._mcts_eval_state)
         counts = [self.data.Nsa[(s, a)] if (s, a) in self.data.Nsa else 0 for a in range(self.game.getActionSize())]
-        if  float(sum(counts)) == 0:
+        if float(sum(counts)) == 0:
             counts = self.data.Ps[s]
         if temp == 0:
             bestA = np.argmax(counts)
@@ -103,8 +103,7 @@ class MCTS():
                 #  We may want to reevaluate the time
                 return
             else:
-
-                if (time.time() - self._mcts_start_time)  < (self._mcts_delta_time*self.args.restart_cutoff):
+                if (time.time() - self._mcts_start_time) < (self._mcts_delta_time*self.args.restart_cutoff):
                     self.stopMCTS()
                     self.startMCTS(canonicalBoard, new_time_remaining)
         else:

@@ -9,23 +9,29 @@ class WebSocketGameClient():
         self.send_log = []
         self.connected = False
         self.game_started = False
+        self.player_ready = False
         self.my_turn = None
         self.my_board = None
+        self.my_color = None
         self.my_team = None
         self.max_time = None
         self.my_action_stack = []
         self.my_action_ptr = 0
         self.partner_action_stack = []
         self.partner_action_ptr = 0
+        self.id_stack = []
+        self.id_ptr = 0
+
+        self.win_counter = 0
+        self.lose_counter = 0
 
     def connect(self):
         self.ws = create_connection(self.url)
         while True:
             message = self.ws.recv()
-            print(">> Message from server: ", message)
+            # print(">> Message from server: ", message)
             self.message_log.append(message)
             if not self.game_started:
-                print(">> Message from server: ", message)
                 if message == 'protover 4':
                     self.ws.send('feature san=1, time=1, variants="bughouse", otherboard=1, myname="debug_engine", colors=1, time=1, done=1')
                     print("Connecttion to BugHouseGame Server established.")
@@ -37,21 +43,25 @@ class WebSocketGameClient():
                         self.my_turn = False
                         self.my_team = bughouse.constants.BOTTOM
                         self.my_board = bughouse.constants.RIGHT
+                        self.my_color = bughouse.constants.BLACK
                     elif message == "partner 1":
                         # I am player 0 and am at the bot left
                         self.my_turn = True
                         self.my_team = bughouse.constants.BOTTOM
                         self.my_board = bughouse.constants.LEFT
+                        self.my_color = bughouse.constants.WHITE
                     elif message == "partner 2":
                         # I am player 3 and am at the top right
                         self.my_turn = True
                         self.my_team = bughouse.constants.TOP
                         self.my_board = bughouse.constants.RIGHT
+                        self.my_color = bughouse.constants.WHITE
                     elif message == "partner 3":
                         # I am player 2 and am at the bot left
                         self.my_turn = False
                         self.my_team = bughouse.constants.TOP
                         self.my_board = bughouse.constants.LEFT
+                        self.my_color = bughouse.constants.BLACK
 
                 if self.max_time is None:
                     if message.split(' ', 1)[0] == "time":
@@ -61,18 +71,37 @@ class WebSocketGameClient():
                     print("Game is starting")
                     self.game_started = True
 
-            elif self.game_started:
-                if message.split(' ', 1)[0] == "move":
+            elif self.game_started and self.player_ready:
+                message_split = message.split(' ', 1)[0]
+                print(message_split)
+                if message_split == "move":
                     self.my_action_stack.append(message.split(' ', 1)[1])
-                if message.split(' ', 1)[0] == "pmove":
+                    self.id_stack.append(0)
+                if message_split == "pmove":
                     self.partner_action_stack.append(message.split(' ', 1)[1])
-                # ToDO implement game ended
+                    self.id_stack.append(1)
+                if message_split == "1-0" or message_split == "p1-0":
+                    if self.my_color == bughouse.constants.WHITE:
+                        self.win_counter += 1
+                    else:
+                        self.lose_counter += 1
+                if message_split == '0-1':
+                    if self.my_color == bughouse.constants.BLACK:
+                        self.win_counter += 1
+                        print("WIN")
+                        self._game_ended_reset()
+                if message_split == '1-0':
+                    if self.my_color == bughouse.constants.WHITE:
+                        self.lose_counter += 1
+                        print("LOSE")
+                        self._game_ended_reset()
 
     def check_my_stack(self) -> bool:
         if len(self.my_action_stack) <= self.my_action_ptr:
             return False
         else:
             return True
+
 
     def pop_my_stack(self) -> str:
         if len(self.my_action_stack) <= self.my_action_ptr:
@@ -98,18 +127,51 @@ class WebSocketGameClient():
             self.partner_action_ptr += 1
             return ret_str
 
+    def check_stack_id(self) -> bool:
+        if len(self.id_stack) <= self.id_ptr:
+            return False
+        else:
+            return True
+
+    def pop_stack_id(self) -> str:
+        if len(self.id_stack) <= self.id_ptr:
+            return
+        else:
+            stack_id = self.id_stack[self.id_ptr]
+            self.id_ptr += 1
+            return stack_id
+
     def send_action(self, action: str):
-        if self.ws is not None:
+        if self.ws is not None and self.game_started and self.player_ready:
             message = "move " + action
             self.send_log.append(message)
             self.ws.send(message)
             self.my_turn = False
+            return True
+        return False
 
     def send_message(self, message: str):
         if self.ws is not None:
             self.send_log.append(message)
             self.ws.send(message)
+            return True
+        return False
+
+    def ready_check(self):
+        self.player_ready = True
 
     def _game_ended_reset(self):
-        # ToDO implement for continous games
+        self.player_ready = False
+        self.game_started = False
+        self.my_turn = None
+        self.my_board = None
+        self.my_color = None
+        self.my_team = None
+        self.max_time = None
+        self.id_stack = []
+        self.id_ptr = 0
+        self.my_action_stack = []
+        self.my_action_ptr = 0
+        self.partner_action_stack = []
+        self.partner_action_ptr = 0
         pass
