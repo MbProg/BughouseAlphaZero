@@ -130,7 +130,7 @@ class MCTS():
         # Overtime for ong games
         ret_time = my_time-canonicalBoard.time_remaining[int(not team), board]
         if ret_time < 0.25:
-            return 0.05
+            return 0.25
         return ret_time
 
 
@@ -185,9 +185,10 @@ def search_mcts(canonicalBoard, data: MCTSData, game, nnet, player=1):
         data.lock.release()
     if data.Es[s]!=0:
         # terminal node
-        return -data.Es[s]
+        # ToDo check if returns are correct
+        return (player*data.Es[s])
 
-
+    # Expand a Node
     if s not in data.Ps:
         # leaf node
         valids = game.getValidMoves(canonicalBoard, 1)
@@ -235,8 +236,10 @@ def search_mcts(canonicalBoard, data: MCTSData, game, nnet, player=1):
                 best_act = a
 
     a = best_act
+    # ToDo boardview?
     next_s, next_player = game.getNextState(player, a, build_matrices=False)
     next_s = game.getCanonicalForm(next_s, next_player)
+    # recursion
     v = search_mcts(next_s, data, game, nnet, next_player)
     data.lock.acquire()
     if (s,a) in data.Qsa:
