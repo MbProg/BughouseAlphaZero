@@ -29,7 +29,7 @@ class WebSocketGameClient():
         self.ws = create_connection(self.url)
         while True:
             message = self.ws.recv()
-            # print(">> Message from server: ", message)
+            print(">> Message from server: ", message)
             self.message_log.append(message)
             if not self.game_started:
                 if message == 'protover 4':
@@ -71,27 +71,30 @@ class WebSocketGameClient():
                     print("Game is starting")
                     self.game_started = True
 
-            elif self.game_started and self.player_ready:
+            elif self.game_started:
                 message_split = message.split(' ', 1)[0]
-                print(message_split)
+                # print(message_split)
                 if message_split == "move":
                     self.my_action_stack.append(message.split(' ', 1)[1])
                     self.id_stack.append(0)
                 if message_split == "pmove":
                     self.partner_action_stack.append(message.split(' ', 1)[1])
                     self.id_stack.append(1)
-                if message_split == "1-0" or message_split == "p1-0":
-                    if self.my_color == bughouse.constants.WHITE:
-                        self.win_counter += 1
-                    else:
-                        self.lose_counter += 1
                 if message_split == '0-1':
                     if self.my_color == bughouse.constants.BLACK:
                         self.win_counter += 1
                         print("WIN")
                         self._game_ended_reset()
+                    else:
+                        self.lose_counter += 1
+                        print("LOSE")
+                        self._game_ended_reset()
                 if message_split == '1-0':
                     if self.my_color == bughouse.constants.WHITE:
+                        self.win_counter += 1
+                        print("WIN")
+                        self._game_ended_reset()
+                    else:
                         self.lose_counter += 1
                         print("LOSE")
                         self._game_ended_reset()
@@ -174,4 +177,3 @@ class WebSocketGameClient():
         self.my_action_ptr = 0
         self.partner_action_stack = []
         self.partner_action_ptr = 0
-        pass

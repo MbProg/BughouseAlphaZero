@@ -45,11 +45,11 @@ from utils import *
 from bughouse.BugHouseGame import display as display
 args = dotdict({
     'cpuct': 1,
-    'mctsTmp' : 0,
+    'mctsTmp' : 0.5,
     'mctsTmpDepth' : 4,
     'mctsValueInit' : -0.1,
     'restart_cutoff' : 0.75,
-    'network_only' : False,
+    'network_only' : True,
 
 
     'numIters': 1,
