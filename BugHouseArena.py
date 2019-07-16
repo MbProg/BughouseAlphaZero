@@ -107,6 +107,7 @@ class BugHouseArena(Arena):
                         other_board_toggle = not other_board_toggle
 
                         # check if we need to reevalute a running mcts task
+                print(state._fen[0], state._fen[1])
                         if self.mcts.is_running():
                             my_time_remaining[0] = max_time - (time.time() - start_time) - delay + (
                                     max_time - my_time_remaining[1])
