@@ -47,6 +47,7 @@ class BugHouseArena(Arena):
         connection_thread.daemon = True
         connection_thread.start()
         # Waiting for Connection
+
         while wsgc.connected == False:
             pass
         # Main Loop  for playing Games
@@ -58,6 +59,7 @@ class BugHouseArena(Arena):
             curPlayer = 1 # Parameter without use in this function but necessary for game
             half_turn = 0 # count the turns
             start_time = time.time() # start tiem of the game
+
             max_time = (wsgc.max_time/timefactor) # maximum time for each player
             # Count the remainign time of each player in these variables
             my_time_remaining = np.full((2,), max_time) # I am pos 0, oponnent is pos 1
@@ -72,7 +74,7 @@ class BugHouseArena(Arena):
             wsgc.ready_check() # Tell the game client I am ready to send my moves
             print("Player Ready")
             # Main rouine for playing a single game
-            while wsgc.game_started == True:
+            while wsgc.game_started == True and wsgc.player_ready:
                 # Look if we got a new move from our opponent or the partner board
                 if wsgc.check_stack_id():
                     # check which board made a move, keeping the order consistent
@@ -84,14 +86,14 @@ class BugHouseArena(Arena):
                                     max_time - my_time_remaining[0])
                         # play the action on our simulated game
                         action = self.game.getActionNumber(wsgc.pop_my_stack())
-                        state, curPlayer = self.game.getNextState(curPlayer, action, time=my_time_remaining[1])
+                        state, curPlayer = self.game.getNextState(curPlayer, action,boardView=False, time=my_time_remaining[1])
                         half_turn += 1
 
                     # play on the other board
-                    elif board_id == 1and wsgc.check_partner_stack():
+                    elif board_id == 1 and wsgc.check_partner_stack():
                         actionString = wsgc.pop_partner_stack()
-                        print(actionString)
-                        print(time.time(), "PLAY OTHER >>", state._fen[0], state._fen[1])
+                        # print(actionString)
+                        # print(time.time(), "PLAY OTHER >>", state._fen[0], state._fen[1])
                         # calculate the time
                         other_time_remaining[int(other_board_toggle)] = max_time - (time.time() - start_time) - delay + \
                                                                         (max_time - other_time_remaining[
@@ -111,19 +113,20 @@ class BugHouseArena(Arena):
                             self.mcts.eval_new_state(state, my_time_remaining[0])
 
                 if wsgc.my_turn and self.mcts.has_finished() and not wsgc.check_my_stack():
-                    print(time.time(), "STOP MCTS >>" ,state._fen[0], state._fen[1])
+                    # print(time.time(), "STOP MCTS >>" ,state._fen[0], state._fen[1])
                     action = None
                     if random:
                         actions = np.array(self.mcts.stopMCTS(temp=0))
                         actions = self.game.getValidMoves(self.game.getCanonicalForm(state, curPlayer), curPlayer)
                         action = choice(np.arange(len(actions)), 1, p=(actions/actions.sum()))[0]
                     else:
-                        if self.args.mctsTmpDepth < (half_turn * 2):
+                        if self.args.mctsTmpDepth < (half_turn / 2.0):
                             actions = np.asarray(self.mcts.stopMCTS(temp=self.args.mctsTmp))
                             action = choice(np.arange(len(actions)), 1, p=(actions / actions.sum()))[0]
                         else:
                             actions = self.mcts.stopMCTS(temp=0)
                             action = np.argmax(actions)
+                    # check if move is valid
                     valids = self.game.getValidMoves(self.game.getCanonicalForm(state, curPlayer), curPlayer)
                     if valids[action] == 0:
                         print(action)
@@ -142,6 +145,7 @@ class BugHouseArena(Arena):
                     half_turn += 1
 
                 if wsgc.my_turn and not self.mcts.is_running():
+                    # check if I am in stalemate (no valid moves)
                     if self.game.getValidMoves(self.game.getCanonicalForm(state, curPlayer), curPlayer).sum() >= 1:
                         self.mcts.startMCTS(state)
                         time.sleep(0.1)
