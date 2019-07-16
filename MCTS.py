@@ -44,7 +44,7 @@ class MCTS():
         self.game.setState(self._mcts_eval_state)
         self._mcts_start_time = time.time()
         if self.args.network_only:
-            self._mcts_delta_time = 0.0001
+            self._mcts_delta_time = 0.001
             self._run_mcts = True
             return True
 
@@ -76,6 +76,8 @@ class MCTS():
                 self._mcts_thread[i].join()
         s = self.game.stringRepresentation(self._mcts_eval_state)
         counts = [self.data.Nsa[(s, a)] if (s, a) in self.data.Nsa else 0 for a in range(self.game.getActionSize())]
+        if float(sum(counts)) == 0:
+            counts = self.data.Ps[s]
         if temp == 0:
             bestA = np.argmax(counts)
             probs = [0] * len(counts)
@@ -101,8 +103,7 @@ class MCTS():
                 #  We may want to reevaluate the time
                 return
             else:
-
-                if (time.time() - self._mcts_start_time)  < (self._mcts_delta_time*self.args.restart_cutoff):
+                if (time.time() - self._mcts_start_time) < (self._mcts_delta_time*self.args.restart_cutoff):
                     self.stopMCTS()
                     self.startMCTS(canonicalBoard, new_time_remaining)
         else:
@@ -112,20 +113,25 @@ class MCTS():
         MAX_TIME = self.game.environment.max_time
         my_fen = self.game.stringRepresentation(canonicalBoard)
         f_moves = int(my_fen.rsplit(" ", 1)[-1])
-        if f_moves <= 4:
-            return 1
-
-        if f_moves <= 30:
-            return (MAX_TIME-44)/26.0
-
-        board = canonicalBoard.board
-        team = canonicalBoard.team
+        board = self.game.environment.board
+        team = self.game.environment.team
+        my_time = None
         if new_time_remaining is not None:
             my_time = new_time_remaining
         else:
             my_time = canonicalBoard.time_remaining[team, board]
+        # Opening
+        if f_moves <= 4:
+            return 1
+        # Midgame to the predicted end
+        if f_moves <= 30:
+            return (MAX_TIME-44)/26.0
 
-        return my_time-canonicalBoard.time_remaining[int(not team), board]
+        # Overtime for ong games
+        ret_time = my_time-canonicalBoard.time_remaining[int(not team), board]
+        if ret_time < 0.25:
+            return 0.05
+        return ret_time
 
 
     def has_finished(self):
@@ -153,7 +159,7 @@ class MCTS():
         self.lock.release()
         return True
 
-def search_mcts(canonicalBoard, data: MCTSData, game, nnet):
+def search_mcts(canonicalBoard, data: MCTSData, game, nnet, player=1):
     """
     This function performs one iteration of MCTS. It is recursively called
     till a leaf node is found. The action chosen at each node is one that
@@ -208,7 +214,7 @@ def search_mcts(canonicalBoard, data: MCTSData, game, nnet):
         data.Vs[s] = valids
         data.Ns[s] = 0
         data.lock.release()
-        return -v
+        return (player*v)
 
     data.lock.acquire()
     valids = data.Vs[s]
@@ -229,21 +235,21 @@ def search_mcts(canonicalBoard, data: MCTSData, game, nnet):
                 best_act = a
 
     a = best_act
-    next_s, next_player = game.getNextState(1, a, build_matrices=False)
+    next_s, next_player = game.getNextState(player, a, build_matrices=False)
     next_s = game.getCanonicalForm(next_s, next_player)
-    v = search_mcts(next_s, data, game, nnet)
+    v = search_mcts(next_s, data, game, nnet, next_player)
     data.lock.acquire()
     if (s,a) in data.Qsa:
         data.Qsa[(s,a)] = (data.Nsa[(s,a)]*data.Qsa[(s,a)] + v)/(data.Nsa[(s,a)]+1)
         data.Nsa[(s,a)] += 1
 
     else:
-        data.Qsa[(s,a)] = v
+        data.Qsa[(s,a)] = player*v
         data.Nsa[(s,a)] = 1
 
     data.Ns[s] += 1
     data.lock.release()
-    return -v
+    return (player*v)
 
 def prune_mcts_data(data: MCTSData, max_depth = 4):
     key_s = []
