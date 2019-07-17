@@ -93,7 +93,7 @@ class BugHouseArena(Arena):
                     elif board_id == 1 and wsgc.check_partner_stack():
                         actionString = wsgc.pop_partner_stack()
                         # print(actionString)
-                        # print(time.time(), "PLAY OTHER >>", state._fen[0], state._fen[1])
+                        print(time.time(), "PLAY OTHER >>", state._fen[0], state._fen[1])
                         # calculate the time
                         other_time_remaining[int(other_board_toggle)] = max_time - (time.time() - start_time) - delay + \
                                                                         (max_time - other_time_remaining[
@@ -107,14 +107,13 @@ class BugHouseArena(Arena):
                         other_board_toggle = not other_board_toggle
 
                         # check if we need to reevalute a running mcts task
-                print(state._fen[0], state._fen[1])
                         if self.mcts.is_running():
                             my_time_remaining[0] = max_time - (time.time() - start_time) - delay + (
                                     max_time - my_time_remaining[1])
                             self.mcts.eval_new_state(state, my_time_remaining[0])
 
                 if wsgc.my_turn and self.mcts.has_finished() and not wsgc.check_my_stack():
-                    # print(time.time(), "STOP MCTS >>" ,state._fen[0], state._fen[1])
+                    print(time.time(), "STOP MCTS >>" ,state._fen[0], state._fen[1])
                     action = None
                     if random:
                         actions = np.array(self.mcts.stopMCTS(temp=0))
