@@ -32,6 +32,7 @@ class BugHouseArena(Arena):
         self.display = display
         self.nnet = nnet
         self.mcts = MCTS(self.game, self.nnet, self.args)
+        self.tick_time = args.tick_time
 
         # self.player1 = lambda x: np.argmax(nmcts.getActionProb(x, temp=0))
         # self.player2 = lambda x: np.argmax(nmcts.getActionProb(x, temp=0))
@@ -40,7 +41,7 @@ class BugHouseArena(Arena):
 
     def playAgainstServer(self, random = False):
 
-        wsgc = WebSocketGameClient()
+        wsgc = WebSocketGameClient(args=self.args)
         delay = 0.000
         timefactor = 100.0
         connection_thread = threading.Thread(target=wsgc.connect)
@@ -107,7 +108,6 @@ class BugHouseArena(Arena):
                         other_board_toggle = not other_board_toggle
 
                         # check if we need to reevalute a running mcts task
-                print(state._fen[0], state._fen[1])
                         if self.mcts.is_running():
                             my_time_remaining[0] = max_time - (time.time() - start_time) - delay + (
                                     max_time - my_time_remaining[1])
@@ -149,7 +149,7 @@ class BugHouseArena(Arena):
                     # check if I am in stalemate (no valid moves)
                     if self.game.getValidMoves(self.game.getCanonicalForm(state, curPlayer), curPlayer).sum() >= 1:
                         self.mcts.startMCTS(state)
-                        time.sleep(0.1)
+            time.sleep(self.tick_time)
 
 
 

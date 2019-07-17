@@ -192,13 +192,9 @@ def search_mcts(canonicalBoard, data: MCTSData, game, nnet, player=1):
     if s not in data.Ps:
         # leaf node
         valids = game.getValidMoves(canonicalBoard, 1)
-        matrices = canonicalBoard.matrice_stack
-        # matrices = game.getCurrentBoardState(True)
+        matrices = game.getCurrentBoardState(True).matrice_stack
         data.lock.acquire()
-        t = time.time()
         data.Ps[s], v = nnet.predict(matrices)
-        # print("expand", time.time()-t)
-        # v = simplified_value_fct(canonicalBoard)
         data.Ps[s] = data.Ps[s]*valids      # masking invalid moves
         sum_Ps_s = np.sum(data.Ps[s])
         if sum_Ps_s > 0:
@@ -238,7 +234,6 @@ def search_mcts(canonicalBoard, data: MCTSData, game, nnet, player=1):
     a = best_act
     # ToDo boardview?
     next_s, next_player = game.getNextState(player, a, build_matrices=False)
-    next_s = game.getCanonicalForm(next_s, next_player)
     # recursion
     v = search_mcts(next_s, data, game, nnet, next_player)
     data.lock.acquire()

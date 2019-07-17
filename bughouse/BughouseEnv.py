@@ -47,8 +47,8 @@ class BughouseEnv():
         self.boards = BughouseBoards()
         self.time_remaining = np.full((2, 2), self.max_time)  # (Teams, Boards)
 
-    def __call__(self, action) -> BughouseState:
-        return self.propapagete_board(action)
+    def __call__(self, action, build_matrices = True) -> BughouseState:
+        return self.propapagete_board(action, build_matrices)
 
     def load_state(self, state : BughouseState):
         self.boards.reset_boards()
