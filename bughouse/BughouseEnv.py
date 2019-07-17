@@ -110,7 +110,7 @@ class BughouseEnv():
         """
         return self.boards.result(board)
 
-    def set_time_remaining(self, time, board):
+    def set_time_remaining(self, time, team=None, board=0):
         """
         Update the time for the last player that made a move on a specified board
 
@@ -119,9 +119,12 @@ class BughouseEnv():
         :param board:
         :return:
         """
-        player_color = self.boards.boards[board].turn
-        team = self.get_team(player_color, board)
-        self.time_remaining[team, board] = time
+        if team is None:
+            player_color = self.boards.boards[board].turn
+            team = self.get_team(player_color, board)
+            self.time_remaining[team, board] = time
+        else:
+            self.time_remaining[team, board] = time
 
     def push(self, uci_move: str, team, board):
         """
