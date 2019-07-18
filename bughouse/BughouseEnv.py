@@ -76,11 +76,11 @@ class BughouseEnv():
         team = self.get_team(player_color, board)
         _fen = self.boards.fen()
         if build_matrices:
-            return BughouseState(self.boards.to_numpy(self.board), time, team, board, _fen)
+            return BughouseState(self.boards.to_numpy(board), time, team, board, _fen)
         else:
             return BughouseState(None, time, team, board, _fen)
 
-    def get_board_state(self, build_matrices = True) -> BughouseState:
+    def get_board_state(self, build_matrices=True, player_view=False) -> BughouseState:
         """
         Shows the state of the specified board independent on who moved last
         :return: BugHouseState object
@@ -89,8 +89,9 @@ class BughouseEnv():
         player_color = self.boards.boards[self.board].turn
         time = self.time_remaining
         team = self.get_team(player_color, self.board)
+        view_color = int(self.color) if player_view else None
         if build_matrices:
-            return BughouseState(self.boards.to_numpy(self.board), time, team, self.board, _fen)
+            return BughouseState(self.boards.to_numpy(self.board, view_color), time, team, self.board, _fen)
         else:
             return BughouseState(None, time, team, self.board, _fen)
 

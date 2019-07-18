@@ -87,7 +87,8 @@ class BugHouseArena(Arena):
                                     max_time - my_time_remaining[0])
                         # play the action on our simulated game
                         action = self.game.getActionNumber(wsgc.pop_my_stack())
-                        state, curPlayer = self.game.getNextState(curPlayer, action,boardView=False, time=my_time_remaining[1])
+                        state, curPlayer = self.game.getNextState(action, time=my_time_remaining[1],
+                                                                  build_matrices=False, player_view=True)
                         half_turn += 1
 
                     # play on the other board
@@ -101,9 +102,9 @@ class BugHouseArena(Arena):
                                                                             int(not other_board_toggle)])
                         # play the action on our simulated game
                         action = self.game.getActionNumber(actionString)
-                        state, curPlayer = self.game.getNextState(curPlayer, action, play_other_board=True,
-                                                                  boardView=False,
-                                                                  time=other_time_remaining[int(other_board_toggle)])
+                        state, curPlayer = self.game.getNextState(action,time=other_time_remaining[int(other_board_toggle)],
+                                                                  play_other_board=True, build_matrices=False,
+                                                                  player_view=False)
                         # toggle the other board so we know a turn has been played
                         other_board_toggle = not other_board_toggle
 
@@ -141,7 +142,7 @@ class BugHouseArena(Arena):
                         print(self.mcts._mcts_eval_state._fen[0], self.mcts._mcts_eval_state._fen[1])
                         assert valids[action] > 0
                     my_time_remaining[0] = max_time - (time.time() - start_time) - delay + (max_time - my_time_remaining[1])
-                    state, curPlayer = self.game.getNextState(curPlayer, action, state, time=my_time_remaining[0])
+                    state, curPlayer = self.game.getNextState(action, time=my_time_remaining[0], build_matrices=False)
                     wsgc.send_action(self.game.getActionString(action))
                     half_turn += 1
 

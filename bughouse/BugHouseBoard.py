@@ -42,7 +42,7 @@ class _BughouseBoard(chess.variant.CrazyhouseBoard):
     def set_fen(self, fen):
         super().set_fen(fen)
 
-    def to_numpy(self, flip: bool):
+    def to_numpy_single(self, player_color):
         #order of figurs
         # Black = 0, White = 1
         # PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING
@@ -50,163 +50,110 @@ class _BughouseBoard(chess.variant.CrazyhouseBoard):
         # Piece postions on the board and promoted pieces
         piece_mat = np.zeros((2, 6, 8, 8))
         promoted_mat = np.zeros((2, 8, 8))  # First White then Black
-        rank = 0
-        file = 0
-        # check each tile for figures and promotion
-        for square in chess.SQUARES_180:
-            mask = chess.BB_SQUARES[square]
-            if self.occupied & mask:
-                if self.pawns & mask:
-                    color = int(bool(self.occupied_co[chess.WHITE] & mask))
-                    fig = chess.PAWN - 1
-                    piece_mat[color, fig, rank, file] = 1
-                elif self.knights & mask:
-                    color = int(bool(self.occupied_co[chess.WHITE] & mask))
-                    fig = chess.KNIGHT - 1
-                    piece_mat[color, fig, rank, file] = 1
-                elif self.bishops & mask:
-                    color = int(bool(self.occupied_co[chess.WHITE] & mask))
-                    fig = chess.BISHOP - 1
-                    piece_mat[color, fig, rank, file] = 1
-                elif self.rooks & mask:
-                    color = int(bool(self.occupied_co[chess.WHITE] & mask))
-                    fig = chess.ROOK - 1
-                    piece_mat[color, fig, rank, file] = 1
-                elif self.queens & mask:
-                    color = int(bool(self.occupied_co[chess.WHITE] & mask))
-                    fig = chess.QUEEN - 1
-                    piece_mat[color, fig, rank, file] = 1
-                elif self.kings & mask:
-                    color = int(bool(self.occupied_co[chess.WHITE] & mask))
-                    fig = chess.KING - 1
-                    piece_mat[color, fig, rank, file] = 1
-                # check for promotion
-                if self.promoted & mask:
-                    color = int(bool(self.occupied_co[chess.WHITE] & mask))
-                    promoted_mat[color, rank, file]
-
-            file  += 1
-            if file >= 8:
-                file = 0
-                rank += 1
-
-        # Get Pockets
-        normalization = 8.0  # max number of pawns
-        pocket_mat = self.get_pockets_numpy(normalization)
-
-        # Team mat
-        color_mat = np.full((8, 8), int(self.turn))
-
-        # check the move count of the players
-        movecount_mat = np.full((8, 8), self.fullmove_number)
-
-        #check castling rights
-        castling_mat = self.get_castling_mat()
-
-        # ToDo implment flippping
-
-        return piece_mat, pocket_mat, color_mat, movecount_mat, promoted_mat, castling_mat
-
-    def to_numpy_single(self, main_board: bool, main_board_player: bool = chess.WHITE):
-        #order of figurs
-        # Black = 0, White = 1
-        # PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING
-
-        if main_board:
-            curr_player = self.turn
-        else:
-            curr_player = not main_board_player
-
-        # Piece postions on the board and promoted pieces
-        piece_mat = np.zeros((2, 6, 8, 8))
-        promoted_mat = np.zeros((2, 8, 8))  # First White then Black
-
-        # en passent mat
-        en_passent_mat = np.zeros((1, 8, 8))
-        if self.ep_square is not None:
-            row = self.ep_square // 8
-            col = self.ep_square % 8
-            en_passent_mat[0, row, col] = 1
 
         rank = 0
         file = 0
         # check each tile for figures and promotion
-        WHITE = True
-        BLACK = False
         # correct postionion so that current player get pos 0 and opponent pos 1
-        curr_player = self.turn
         #  Get pieces and promoted
         for square in chess.SQUARES_180:
             mask = chess.BB_SQUARES[square]
             if self.occupied & mask:
                 if self.pawns & mask:
-                    color = int(bool(self.occupied_co[chess.WHITE] & mask)and not curr_player)
+                    color = int(bool(self.occupied_co[chess.WHITE] & mask) != player_color)
                     fig = chess.PAWN - 1
                     piece_mat[color, fig, rank, file] = 1
                 elif self.knights & mask:
-                    color = int(bool(self.occupied_co[chess.WHITE] & mask)and not curr_player)
+                    color = int(bool(self.occupied_co[chess.WHITE] & mask) != player_color)
                     fig = chess.KNIGHT - 1
                     piece_mat[color, fig, rank, file] = 1
                 elif self.bishops & mask:
-                    color = int(bool(self.occupied_co[chess.WHITE] & mask) and not curr_player)
+                    color = int(bool(self.occupied_co[chess.WHITE] & mask) != player_color)
                     fig = chess.BISHOP - 1
                     piece_mat[color, fig, rank, file] = 1
                 elif self.rooks & mask:
-                    color = int(bool(self.occupied_co[chess.WHITE] & mask)and not curr_player)
+                    color = int(bool(self.occupied_co[chess.WHITE] & mask) != player_color)
                     fig = chess.ROOK - 1
                     piece_mat[color, fig, rank, file] = 1
                 elif self.queens & mask:
-                    color = int(bool(self.occupied_co[chess.WHITE] & mask)and not curr_player)
+                    color = int(bool(self.occupied_co[chess.WHITE] & mask) != player_color)
                     fig = chess.QUEEN - 1
                     piece_mat[color, fig, rank, file] = 1
                 elif self.kings & mask:
-                    color = int(bool(self.occupied_co[chess.WHITE] & mask)and not curr_player)
+                    color = int(bool(self.occupied_co[chess.WHITE] & mask) != player_color)
                     fig = chess.KING - 1
                     piece_mat[color, fig, rank, file] = 1
-                # check for promotion
-                if self.promoted & mask:
-                    color = int(bool(self.occupied_co[chess.WHITE] & mask)and not curr_player)
-                    promoted_mat[color, rank, file]
             file += 1
             if file >= 8:
                 file = 0
                 rank += 1
-        if curr_player == chess.BLACK:
+
+        # Fill promotion Mat
+        index_toggle = True # Controls the order of the matrices, (False if player is White)
+        if player_color == chess.WHITE:
+            index_toggle = not index_toggle
+
+        for square in chess.SquareSet(self.promoted):
+            row = square // 8
+            col = square % 8
+            row = 7 - row
+            if self.piece_at(square).color == chess.WHITE:
+                promoted_mat[int(index_toggle), row, col] = 1
+            else:
+                promoted_mat[int(not index_toggle), row, col] = 1
+        if player_color == chess.BLACK:
             piece_mat = np.flip(np.flip(piece_mat, 2), 3)
             promoted_mat = np.flip(np.flip(promoted_mat, 1), 2)
-            en_passent_mat = np.flip(np.flip(en_passent_mat, 1), 2)
+            # en_passent_mat = np.flip(np.flip(en_passent_mat, 1), 2)
 
         piece_mat = np.concatenate(piece_mat, axis=0)
         # Get Pockets
-        normalization = 8.0  # max number of pawns
-        pocket_mat = self.get_pockets_numpy(normalization, curr_player) # Flip if current is WHITE
+        pocket_mat = self.get_pockets_numpy(player_color) # Flip if current is WHITE
 
         # Team mat
         color_mat = np.full((8, 8), int(self.turn))
 
         # check the move count of the players
-        movecount_mat = np.full((8, 8), self.fullmove_number)
+        max_moves = 100.0
+        norm_moves = 1.0 if self.fullmove_number > max_moves else self.fullmove_number / max_moves
+        movecount_mat = np.full((8, 8), norm_moves)
 
         #check castling rights
-        castling_mat = self.get_castling_mat(curr_player)
-        return piece_mat, pocket_mat, color_mat, movecount_mat, promoted_mat, castling_mat#ToDo, en_passent_mat
+        castling_mat = self.get_castling_mat(player_color)
+        return piece_mat, pocket_mat, color_mat, movecount_mat, promoted_mat, castling_mat
 
-    def get_pockets_numpy(self, normalization = 8, player: bool = False):
+    def get_pockets_numpy(self, player):
         # oder of Pocket LEFT, RIGHT
         # order of colors WHITE = 1, BLACK = 0
         # White PAWN, KNIGHT, BISHOP, ROOK, QUEEN then Black PAWN, KNIGHT, BISHOP, ROOK, QUEEN
         # 8x8 is network input size
         ret_pockets = np.zeros((2, 5, 8, 8))
-        if not player:  # changes the pocket order if necesary
-            for pt, count in self.pockets[chess.BLACK].pieces.items():
-                ret_pockets[int(chess.BLACK), pt - 1, :, :] = float(count) / normalization
-            for pt, count in self.pockets[chess.WHITE].pieces.items():
-                ret_pockets[int(chess.WHITE), pt - 1, :, :] = float(count) / normalization
-        else:
-            for pt, count in self.pockets[chess.BLACK].pieces.items():
-                ret_pockets[int(not chess.BLACK), pt - 1, :, :] = float(count) / normalization
-            for pt, count in self.pockets[chess.WHITE].pieces.items():
-                ret_pockets[int(not chess.WHITE), pt - 1, :, :] = float(count) / normalization
+        index_toggle = True # Controls the order of the matrices, (False if player is White)
+        if player == chess.WHITE:
+            index_toggle = not index_toggle
+
+        for pt, count in self.pockets[chess.WHITE].pieces.items():
+            if pt ==chess.PAWN:
+                ret_pockets[int(index_toggle), pt - 1, :, :] = float(count) / 8.0
+            if pt == chess.KNIGHT:
+                ret_pockets[int(index_toggle), pt - 1, :, :] = float(count) / 2.0
+            if pt == chess.BISHOP:
+                ret_pockets[int(index_toggle), pt - 1, :, :] = float(count) / 2.0
+            if pt == chess.ROOK:
+                ret_pockets[int(index_toggle), pt - 1, :, :] = float(count) / 2.0
+            if pt == chess.QUEEN:
+                ret_pockets[int(index_toggle), pt - 1, :, :] = float(count)
+        for pt, count in self.pockets[chess.BLACK].pieces.items():
+            if pt ==chess.PAWN:
+                ret_pockets[int(not index_toggle), pt - 1, :, :] = float(count) / 8.0
+            if pt == chess.KNIGHT:
+                ret_pockets[int(not index_toggle), pt - 1, :, :] = float(count) / 2.0
+            if pt == chess.BISHOP:
+                ret_pockets[int(not index_toggle), pt - 1, :, :] = float(count) / 2.0
+            if pt == chess.ROOK:
+                ret_pockets[int(not index_toggle), pt - 1, :, :] = float(count) / 2.0
+            if pt == chess.QUEEN:
+                ret_pockets[int(not index_toggle), pt - 1, :, :] = float(count)
         return np.concatenate(ret_pockets, axis = 0)
 
     def get_castling_mat(self, player: bool):
@@ -464,15 +411,18 @@ class BughouseBoards:
     def generate_legal_moves(self, board):
         return self.boards[board].generate_legal_moves()
 
-    def to_numpy(self, board : int):
+    def to_numpy(self, board: int, player_color: int = None):
         # Flip to get both player on the same side
         # main board
         other_board = 1 if board == 0 else 0
-        partner_color = self.boards[board].turn
+        my_color = self.boards[board].turn
+        if player_color is not None:
+            my_color = player_color
+        partner_color = not my_color
         piece_mat_m, pocket_mat_m, color_mat_m, movecount_mat_m, promoted_mat_m, castling_mat_m =\
-            self.boards[board].to_numpy_single(True)
+            self.boards[board].to_numpy_single(my_color)
         piece_mat_p, pocket_mat_p, color_mat_p, movecount_mat_p, promoted_mat_p, castling_mat_p =\
-            self.boards[other_board].to_numpy_single(False, partner_color)
+            self.boards[other_board].to_numpy_single(partner_color)
         ret_mat = np.concatenate([piece_mat_m,piece_mat_p, pocket_mat_m, pocket_mat_p, np.stack([color_mat_m, color_mat_p]), np.stack([movecount_mat_m, movecount_mat_p]), promoted_mat_m, promoted_mat_p, castling_mat_m, castling_mat_p])
         return ret_mat
 

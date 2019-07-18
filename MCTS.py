@@ -233,7 +233,7 @@ def search_mcts(canonicalBoard, data: MCTSData, game, nnet, player=1):
 
     a = best_act
     # ToDo boardview?
-    next_s, next_player = game.getNextState(player, a, build_matrices=False)
+    next_s, next_player = game.getNextState(a,player=player, build_matrices=False)
     # recursion
     v = search_mcts(next_s, data, game, nnet, next_player)
     data.lock.acquire()
