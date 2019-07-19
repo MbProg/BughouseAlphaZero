@@ -23,7 +23,7 @@ class MCTSData():
         self.lock = threading.Lock()
 
 class MCTS():
-    AVAILABLE_CORES =  1
+    AVAILABLE_CORES = 1
 
     def __init__(self, game, nnet, args):
         self.args = args
@@ -40,11 +40,11 @@ class MCTS():
         self.lock = threading.Lock()
 
     def startMCTS(self, canonicalBoard, new_time_remaining = None):
-        self._mcts_eval_state = copy.deepcopy(canonicalBoard)
-        self.game.setState(self._mcts_eval_state)
+        self.game.setState(canonicalBoard)
+        self._mcts_eval_state = self.game.getCurrentBoardState()
         self._mcts_start_time = time.time()
         if self.args.network_only:
-            self._mcts_delta_time = 0.001
+            self._mcts_delta_time = self.args.tick_time
             self._run_mcts = True
             return True
 
