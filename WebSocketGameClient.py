@@ -1,8 +1,13 @@
 from websocket import create_connection
+import time
 import bughouse.constants
 
 class WebSocketGameClient():
-    def __init__(self, url = "ws://127.0.0.1/websocketclient"):
+    def __init__(self, url = "ws://127.0.0.1/websocketclient", args = None):
+        if args is not None:
+            self.tick_time = args.tick_time
+        else:
+            self.tick_time = 0.05
         self.url = url
         self.ws = None
         self.message_log = []
@@ -98,6 +103,7 @@ class WebSocketGameClient():
                         self.lose_counter += 1
                         print("LOSE")
                         self._game_ended_reset()
+            time.sleep(self.tick_time)
 
     def check_my_stack(self) -> bool:
         if len(self.my_action_stack) <= self.my_action_ptr:

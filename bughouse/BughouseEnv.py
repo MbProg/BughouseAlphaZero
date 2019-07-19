@@ -47,8 +47,8 @@ class BughouseEnv():
         self.boards = BughouseBoards()
         self.time_remaining = np.full((2, 2), self.max_time)  # (Teams, Boards)
 
-    def __call__(self, action) -> BughouseState:
-        return self.propapagete_board(action)
+    def __call__(self, action, build_matrices = True) -> BughouseState:
+        return self.propapagete_board(action, build_matrices)
 
     def load_state(self, state : BughouseState):
         self.boards.reset_boards()
@@ -76,11 +76,11 @@ class BughouseEnv():
         team = self.get_team(player_color, board)
         _fen = self.boards.fen()
         if build_matrices:
-            return BughouseState(self.boards.to_numpy(self.board), time, team, board, _fen)
+            return BughouseState(self.boards.to_numpy(board), time, team, board, _fen)
         else:
             return BughouseState(None, time, team, board, _fen)
 
-    def get_board_state(self, build_matrices = True) -> BughouseState:
+    def get_board_state(self, build_matrices=True, player_view=False) -> BughouseState:
         """
         Shows the state of the specified board independent on who moved last
         :return: BugHouseState object
@@ -89,8 +89,9 @@ class BughouseEnv():
         player_color = self.boards.boards[self.board].turn
         time = self.time_remaining
         team = self.get_team(player_color, self.board)
+        view_color = int(self.color) if player_view else None
         if build_matrices:
-            return BughouseState(self.boards.to_numpy(self.board), time, team, self.board, _fen)
+            return BughouseState(self.boards.to_numpy(self.board, view_color), time, team, self.board, _fen)
         else:
             return BughouseState(None, time, team, self.board, _fen)
 
@@ -110,7 +111,7 @@ class BughouseEnv():
         """
         return self.boards.result(board)
 
-    def set_time_remaining(self, time, board):
+    def set_time_remaining(self, time, team=None, board=0):
         """
         Update the time for the last player that made a move on a specified board
 
@@ -119,9 +120,12 @@ class BughouseEnv():
         :param board:
         :return:
         """
-        player_color = self.boards.boards[board].turn
-        team = self.get_team(player_color, board)
-        self.time_remaining[team, board] = time
+        if team is None:
+            player_color = self.boards.boards[board].turn
+            team = self.get_team(player_color, board)
+            self.time_remaining[team, board] = time
+        else:
+            self.time_remaining[team, board] = time
 
     def push(self, uci_move: str, team, board):
         """

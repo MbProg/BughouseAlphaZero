@@ -44,6 +44,8 @@ from BugHouseArena import BugHouseArena
 from utils import *
 from bughouse.BugHouseGame import display as display
 args = dotdict({
+    'tick_time' : 0.05,
+
     'cpuct': 1,
     'mctsTmp' : 0.5,
     'mctsTmpDepth' : 4,
@@ -79,7 +81,7 @@ if __name__=="__main__":
 
     g = Game()
     nnet = nn(g, b_randomNet=False)
-    b = BugHouseArena(g,nnet,args,display)
+    b = BugHouseArena(g, nnet, args, display)
     b.playAgainstServer(random=False)
 
     # g = Game()

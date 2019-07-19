@@ -31,21 +31,24 @@ class BugHouseGame(Game):
             if elem == actionString:
                 return counter
 
-    def getNextState(self, player, action, state=None, play_other_board = False, boardView = False, time=None, build_matrices=True):
+    def getNextState(self, action, player=0, state=None, time=None, play_other_board = False, build_matrices=True,
+                     boardView=False, player_view=False):
+        if player_view:
+            boardView = True
         state = None
         if state is not None:
             self.environment.load_state(state)
         if play_other_board is False:
             if time is not None:
-                self.environment.set_time_remaining(time, self.environment.board)
+                self.environment.set_time_remaining(time,None, self.environment.board)
             state = self.environment(constants.LABELS[action])
             return state, -player
         else:
             if time is not None:
-                self.environment.set_time_remaining(time, int(not self.environment.board))
+                self.environment.set_time_remaining(time,None, int(not self.environment.board))
             self.environment.push(constants.LABELS[action], 0, int(not self.environment.board))
             if boardView:
-                state = self.environment.get_board_state(build_matrices=build_matrices)
+                state = self.environment.get_board_state(build_matrices=build_matrices, player_view=player_view)
             else:
                 state = self.environment.get_state(build_matrices=build_matrices)
             return state, player
