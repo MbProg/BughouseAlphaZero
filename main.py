@@ -66,7 +66,8 @@ args = dotdict({
     'numItersForTrainExamplesHistory': 20,
 
 })
-
+import os
+os.environ["CUDA_VISIBLE_DEVICES"]="-1"
 if __name__=="__main__":
     # g = Game(6)
     # nnet = nn(g)
@@ -77,9 +78,9 @@ if __name__=="__main__":
     # b.playAgainstServer(random=False)
 
     g = Game()
-    nnet = nn(g, b_randomNet=True)
+    nnet = nn(g, b_randomNet=False)
     b = BugHouseArena(g,nnet,args,display)
-    b.playAgainstServer(random=True)
+    b.playAgainstServer(random=False)
 
     # g = Game()
     # nnet = nn(g, b_randomNet=True)

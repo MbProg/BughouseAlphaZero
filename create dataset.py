@@ -144,10 +144,10 @@ def create_states_from_moves(moves, time, row, line, value_and_policy_dict, outc
     # set the initial time for every player
     global ID
     bughouseEnv = BughouseEnv()
-    bughouseEnv.set_time_remaining(time, 0, 0)
-    bughouseEnv.set_time_remaining(time, 0, 1)
-    bughouseEnv.set_time_remaining(time, 1, 0)
-    bughouseEnv.set_time_remaining(time, 1, 1)
+    bughouseEnv.set_time_remaining(time, 0)
+    bughouseEnv.set_time_remaining(time, 1)
+    bughouseEnv.set_time_remaining(time, 0)
+    bughouseEnv.set_time_remaining(time, 1)
     line_of_games_with_illegal_moves = list()
     while moves:
         if(moves.isspace()) : break
@@ -181,7 +181,7 @@ def create_states_from_moves(moves, time, row, line, value_and_policy_dict, outc
             time = float(move)
 
             #update value_and_policy dictionary
-            fen_key = bughouseEnv.get_state()._boards_fen
+            fen_key = bughouseEnv.get_state()._fen
             fen_key.append(str(team_number))
             fen_key.append(str(board_number))
             fen_key = ' '.join(fen_key)
@@ -235,7 +235,7 @@ def create_states_from_moves(moves, time, row, line, value_and_policy_dict, outc
                 # print(line)
                 line_of_games_with_illegal_moves.append(line)
                 break
-            bughouseEnv.set_time_remaining(time, team_number, board_number)
+            bughouseEnv.set_time_remaining(time, board_number)
 
             policy = np.zeros(constants.NB_LABELS)
             str_policies = np.array(constants.LABELS)
@@ -383,7 +383,7 @@ import sys
 # pl = load_zip('dataset/0.zip')
 # l = read_dataset(r'dataset\0.pkl')
 # print(l)
-listFiles = [
+listFiles = ['filtered_dataset_small.csv',
         'filtered_dataset_2005.csv','filtered_dataset_2006.csv','filtered_dataset_2007.csv','filtered_dataset_2008.csv','filtered_dataset_2009.csv',
         'filtered_dataset_2010.csv'
         'filtered_dataset_2011.csv','filtered_dataset_2012.csv','filtered_dataset_2013.csv','filtered_dataset_2014.csv','filtered_dataset_2015.csv',
@@ -394,9 +394,10 @@ for filename in listFiles:
     print('**********************************************************')
     print('Filename: ', filename)
     try:
-        Last_Id = create_dataset('dataRaw/' + filename, 'datasetValueCorrect/',Last_Id)
-    except:
+        Last_Id = create_dataset('dataRaw/' + filename, 'datasetSmallPart/',Last_Id)
+    except Exception as e:
         print('Exception....')
+        print(e)
     print('**********************************************************')
 print('Data preprocessing finished.')
 

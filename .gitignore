@@ -30,3 +30,5 @@ dataSmallPart/
 dataset_pkl/
 .ipynb_checkpoints/
 finalModel/FinalModel05072019.h5
+dataRaw/
+datasetSmallPart/

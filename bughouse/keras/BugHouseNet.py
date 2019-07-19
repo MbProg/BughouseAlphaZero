@@ -45,7 +45,7 @@ class BugHouseNet():
 
         self.model = keras.models.load_model('finalModel/FinalModel05072019.h5',custom_objects={'acc_round': acc_round,'acc_sign':acc_sign})
         # self.model.load_weights('finalModel/model-05.hdf5')
-        self._evaluate([6001])
+        # self._evaluate([6001])
         global graph
         graph = tf.get_default_graph()
 
