@@ -31,8 +31,10 @@ args = dotdict({
     'numItersForTrainExamplesHistory': 20,
 
 })
+import os
+os.environ["CUDA_VISIBLE_DEVICES"]="-1"
 
-_fen =  ["rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR[Q] w KQkq - 0 1","1nb1k2q/Pp4p1/2p1r3/p2p1n1p/4pp1P/P2Q1N2/P2PPPPR/RNB1KB2[] w Q - 0 1"]
+_fen =  ["r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4","rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"]
 state = BughouseState(None, np.full((2, 2), 300), 0,0, _fen )
 
 g = BugHouseGame()
@@ -44,8 +46,10 @@ for v in valids:
     if v > 0:
         print(constants.LABELS[i])
     i += 1
-nnet = nn(g, b_randomNet=True)
-predict=nnet.predict(s.matrice_stack)
+nnet = nn(g, b_randomNet=False)
+p,v =nnet.predict(s.matrice_stack)
+p_valid = p*valids
+p_norm = p_valid/np.linalg.norm(p_valid)
 mcts = MCTS(g,nnet,args)
 import time
 mcts.startMCTS(state)

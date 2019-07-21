@@ -383,18 +383,18 @@ import sys
 # pl = load_zip('dataset/0.zip')
 # l = read_dataset(r'dataset\0.pkl')
 # print(l)
-listFiles = ['filtered_dataset_small.csv',
-        'filtered_dataset_2005.csv','filtered_dataset_2006.csv','filtered_dataset_2007.csv','filtered_dataset_2008.csv','filtered_dataset_2009.csv',
-        'filtered_dataset_2010.csv'
-        'filtered_dataset_2011.csv','filtered_dataset_2012.csv','filtered_dataset_2013.csv','filtered_dataset_2014.csv','filtered_dataset_2015.csv',
+listFiles = [
+        # 'filtered_dataset_2005.csv','filtered_dataset_2006.csv','filtered_dataset_2007.csv','filtered_dataset_2008.csv','filtered_dataset_2009.csv',
+        # 'filtered_dataset_2010.csv', 'filtered_dataset_2011.csv','filtered_dataset_2012.csv',
+        'filtered_dataset_2013.csv','filtered_dataset_2014.csv','filtered_dataset_2015.csv',
         'filtered_dataset_2016.csv','filtered_dataset_2017.csv','filtered_dataset_2018.csv',]
-Last_Id = 0
+Last_Id = 1807
 # Last_Id = create_dataset('dataRaw/filtered_dataset_2005.csv','dataReal/')
 for filename in listFiles:
     print('**********************************************************')
     print('Filename: ', filename)
     try:
-        Last_Id = create_dataset('dataRaw/' + filename, 'datasetSmallPart/',Last_Id)
+        Last_Id = create_dataset('dataRaw/' + filename, 'dataset/',Last_Id)
     except Exception as e:
         print('Exception....')
         print(e)

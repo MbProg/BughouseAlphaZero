@@ -43,9 +43,9 @@ class BugHouseNet():
         #                     'value':'mean_squared_error'}, optimizer=sgd,
         #             metrics={'policy':'accuracy', 'value':[acc_round, acc_sign]}, loss_weights=[0.25,0.75])
 
-        self.model = keras.models.load_model('finalModel/FinalModel05072019.h5',custom_objects={'acc_round': acc_round,'acc_sign':acc_sign})
+        self.model = keras.models.load_model('finalModel/FinalModelNewData.h5',custom_objects={'acc_round': acc_round,'acc_sign':acc_sign})
         # self.model.load_weights('finalModel/model-05.hdf5')
-        # self._evaluate([6001])
+        # self._evaluate([300],'datasetSmallPart/')
         global graph
         graph = tf.get_default_graph()
 

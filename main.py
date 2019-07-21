@@ -68,8 +68,8 @@ args = dotdict({
     'numItersForTrainExamplesHistory': 20,
 
 })
-import os
-os.environ["CUDA_VISIBLE_DEVICES"]="-1"
+# import os
+# os.environ["CUDA_VISIBLE_DEVICES"]="-1"
 if __name__=="__main__":
     # g = Game(6)
     # nnet = nn(g)
