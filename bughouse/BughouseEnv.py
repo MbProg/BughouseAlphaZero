@@ -68,13 +68,13 @@ class BughouseEnv():
         else:
             return BughouseState(None, time, team, board, _fen)
 
-    def get_state(self, build_matrices = True) -> BughouseState:
-        board = self.last_board_moved
-        # time = self.flip_time(board)
-        time = self.time_remaining
-        player_color = self.boards.boards[board].turn
-        team = self.get_team(player_color, board)
+    def get_state(self, board = None, team = None, build_matrices = True) -> BughouseState:
         _fen = self.boards.fen()
+        time = self.time_remaining
+        if not ((board is not None) and (team is not None)):
+            board = self.last_board_moved
+            player_color = self.boards.boards[board].turn
+            team = self.get_team(player_color, board)
         if build_matrices:
             return BughouseState(self.boards.to_numpy(board), time, team, board, _fen)
         else:
@@ -154,6 +154,11 @@ class BughouseEnv():
         self.boards.boards[board].push(move)
         if to_uci:
             return move.uci()
+
+    def san_to_uci(self, san_move: str, team, board):
+        move = self.boards.boards[board].parse_san(san_move)
+        return move.uci()
+
 
     def push_action(self, action: int, board):
         self.push(constants.LABELS[action], 0, board)

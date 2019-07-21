@@ -219,7 +219,8 @@ def create_states_from_moves(moves, time, row, line, value_and_policy_dict, outc
 
             #try to push the new move to the board. If move is illegal, break
             try:
-                uci_move = bughouseEnv.push_san(san, team_number, board_number, to_uci=True)
+                uci_move = bughouseEnv.san_to_uci(san, team_number, board_number)
+                # uci_move = bughouseEnv.push_san(san, team_number, board_number, to_uci=True)
                 if fen_key in value_and_policy_dict:
                     # value_and_policy_dict[fen_key][0].append(1 if winning_team == team_number else 0)
                     value_and_policy_dict[fen_key][0].append(value)
@@ -240,7 +241,9 @@ def create_states_from_moves(moves, time, row, line, value_and_policy_dict, outc
             policy = np.zeros(constants.NB_LABELS)
             str_policies = np.array(constants.LABELS)
             policy[np.where(np.isin(str_policies, uci_move))] = 1.
-            rl_datapoint = RL_Datapoint(bughouseEnv.get_state().matrice_stack, policy, value)
+            rl_datapoint = RL_Datapoint(bughouseEnv.get_state(board=board_number, team=team_number).matrice_stack, policy, value)
+            # push move
+            bughouseEnv.push(uci_move, team_number,board_number)
             # rl_datapoint.zip_data(outputdirectory + str(ID) + '.zip')
             datapointSaver.append(rl_datapoint)
             # with open(outputdirectory + str(ID) + '.pkl', 'wb') as output_file:
