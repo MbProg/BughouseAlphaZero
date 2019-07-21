@@ -3,12 +3,12 @@ import time
 import bughouse.constants
 
 class WebSocketGameClient():
-    def __init__(self, url = "ws://127.0.0.1/websocketclient", args = None):
+    def __init__(self, args = None):
         if args is not None:
             self.tick_time = args.tick_time
         else:
             self.tick_time = 0.05
-        self.url = url
+        self.url = args.url
         self.ws = None
         self.message_log = []
         self.send_log = []
