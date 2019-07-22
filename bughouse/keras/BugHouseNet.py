@@ -30,7 +30,7 @@ def acc_round_unequal(y_true,y_pred):
 graph = None
 
 class BugHouseNet():
-    def __init__(self, args, modelweights_path='models/model-05.hdf5'):
+    def __init__(self, args, modelweights_path='finalModel/FinalModelNewData.h5'):
 
         self.CLASSES_LEN = NB_LABELS
         self.channel_pos = 'channels_last'
@@ -43,7 +43,7 @@ class BugHouseNet():
         #                     'value':'mean_squared_error'}, optimizer=sgd,
         #             metrics={'policy':'accuracy', 'value':[acc_round, acc_sign]}, loss_weights=[0.25,0.75])
 
-        self.model = keras.models.load_model('finalModel/FinalModelNewData.h5',custom_objects={'acc_round': acc_round,'acc_sign':acc_sign})
+        self.model = keras.models.load_model(modelweights_path,custom_objects={'acc_round': acc_round,'acc_sign':acc_sign})
         # self.model.load_weights('finalModel/model-05.hdf5')
         # self._evaluate([300],'datasetSmallPart/')
         global graph
