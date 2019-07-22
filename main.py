@@ -9,6 +9,7 @@ from bughouse.BugHouseGame import display as display
 args = dotdict({
     'tick_time' : 0.05,
     'url' : "ws://127.0.0.1/websocketclient",
+    'fix_action_input': True,
     'cpuct': 1,
     'mctsTmp' : 0.5,
     'mctsTmpDepth' : 4,

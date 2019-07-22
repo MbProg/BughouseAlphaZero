@@ -80,10 +80,16 @@ class WebSocketGameClient():
                 message_split = message.split(' ', 1)[0]
                 # print(message_split)
                 if message_split == "move":
-                    self.my_action_stack.append(message.split(' ', 1)[1])
+                    action_string = message.split(' ', 1)[1]
+                    if self.fix_action_input:
+                        action_string = self._fix_action_string(action_string)
+                    self.my_action_stack.append(action_string)
                     self.id_stack.append(0)
                 if message_split == "pmove":
-                    self.partner_action_stack.append(message.split(' ', 1)[1])
+                    action_string = message.split(' ', 1)[1]
+                    if self.fix_action_input:
+                        action_string = self._fix_action_string(action_string)
+                    self.partner_action_stack.append(action_string)
                     self.id_stack.append(1)
                 if message_split == '0-1':
                     if self.my_color == bughouse.constants.BLACK:
@@ -183,3 +189,10 @@ class WebSocketGameClient():
         self.my_action_ptr = 0
         self.partner_action_stack = []
         self.partner_action_ptr = 0
+
+    def _fix_action_string(self, action_string: str):
+        if '@' in action_string:
+            suffix,appendix = action_string.split('@', 1)
+            return suffix.upper() + '@' + appendix
+        return action_string
+

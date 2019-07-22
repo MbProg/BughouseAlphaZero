@@ -27,9 +27,7 @@ class BugHouseGame(Game):
         return constants.LABELS[action]
 
     def getActionNumber(self, actionString):
-        for counter, elem in enumerate(constants.LABELS):
-            if elem == actionString:
-                return counter
+        return constants.LABELS.index(actionString)
 
     def getNextState(self, action, player=0, state=None, time=None, play_other_board = False, build_matrices=True,
                      boardView=False, player_view=False):
