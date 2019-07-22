@@ -3,13 +3,12 @@ import time
 import bughouse.constants
 
 class WebSocketGameClient():
-    def __init__(self, args = None):
-        if args is not None:
-            self.tick_time = args.tick_time
-        else:
-            self.tick_time = 0.05
+    def __init__(self, args):
         self.url = args.url
+        self.fix_action_input = args.fix_action_input
+        self.tick_time = args.tick_time
         self.ws = None
+
         self.message_log = []
         self.send_log = []
         self.connected = False
@@ -82,13 +81,13 @@ class WebSocketGameClient():
                 if message_split == "move":
                     action_string = message.split(' ', 1)[1]
                     if self.fix_action_input:
-                        action_string = self._fix_action_string(action_string)
+                        action_string = self._fix_action(action_string)
                     self.my_action_stack.append(action_string)
                     self.id_stack.append(0)
                 if message_split == "pmove":
                     action_string = message.split(' ', 1)[1]
                     if self.fix_action_input:
-                        action_string = self._fix_action_string(action_string)
+                        action_string = self._fix_action(action_string)
                     self.partner_action_stack.append(action_string)
                     self.id_stack.append(1)
                 if message_split == '0-1':
@@ -190,7 +189,7 @@ class WebSocketGameClient():
         self.partner_action_stack = []
         self.partner_action_ptr = 0
 
-    def _fix_action_string(self, action_string: str):
+    def _fix_action(self, action_string: str):
         if '@' in action_string:
             suffix,appendix = action_string.split('@', 1)
             return suffix.upper() + '@' + appendix
