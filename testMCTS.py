@@ -5,6 +5,7 @@ from bughouse.keras.NNet import NNetWrapper as nn
 from utils import *
 import numpy as np
 import bughouse.constants as constants
+import matplotlib.pyplot as plt
 
 args = dotdict({
     'tick_time': 0.05,
@@ -31,10 +32,37 @@ args = dotdict({
     'numItersForTrainExamplesHistory': 20,
 
 })
+
+def sortByProb(normed_policies):
+    tuples = []
+    for index,prob in enumerate(normed_policies):
+        if prob>0:
+            tuples.append((constants.LABELS[index],prob))
+    
+    tuples.sort(key=lambda tup: tup[1],reverse=True) 
+    actions = []
+    values = []
+    for action,prob in tuples[:10]:
+        actions.append(action)
+        values.append(prob)
+    plot_bar_x(actions,values)
+
+
+
+def plot_bar_x(label,values):
+    # this is for plotting purpose
+    index = np.arange(len(label))
+    plt.bar(index, values)
+    plt.xlabel('Moves')
+    plt.ylabel('Probablity')
+    plt.xticks(index, label)
+    plt.show()
+
+
 import os
 os.environ["CUDA_VISIBLE_DEVICES"]="-1"
 
-_fen =  ["r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4","rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"]
+_fen =  ["2bqkbn1/2pppp2/np2N3/r3P1p1/p2N2B1/5Q2/PPPPKPP1/RNB2r2 w KQkq - 0 1","rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"]
 state = BughouseState(None, np.full((2, 2), 300), 0,0, _fen )
 
 g = BugHouseGame()
@@ -46,10 +74,11 @@ for v in valids:
     if v > 0:
         print(constants.LABELS[i])
     i += 1
-nnet = nn(g, b_randomNet=False)
+nnet = nn(g,modelweights_path = 'models/model-04.hdf5', b_randomNet=False)
 p,v =nnet.predict(s.matrice_stack)
 p_valid = p*valids
-p_norm = p_valid/np.linalg.norm(p_valid)
+p_norm = p_valid/np.sum(p_valid)
+sortByProb(p_norm)
 mcts = MCTS(g,nnet,args)
 import time
 mcts.startMCTS(state)
