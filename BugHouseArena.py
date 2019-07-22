@@ -33,9 +33,6 @@ class BugHouseArena(Arena):
         self.nnet = nnet
         self.mcts = MCTS(self.game, self.nnet, self.args)
         self.tick_time = args.tick_time
-
-        # self.player1 = lambda x: np.argmax(nmcts.getActionProb(x, temp=0))
-        # self.player2 = lambda x: np.argmax(nmcts.getActionProb(x, temp=0))
         self.game = game
         self.display = display
 
@@ -152,7 +149,8 @@ class BugHouseArena(Arena):
                                     max_time - my_time_remaining[1])
                             self.mcts.eval_new_state(state, my_time_remaining[0])
 
-            time.sleep(self.tick_time)
+                # Short sleep to help unblocking the thread
+                time.sleep(self.tick_time)
 
 
 

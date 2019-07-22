@@ -6,7 +6,6 @@ class WebSocketGameClient():
     def __init__(self, args):
         self.url = args.url
         self.fix_action_input = args.fix_action_input
-        self.tick_time = args.tick_time
         self.ws = None
 
         self.message_log = []
@@ -108,7 +107,6 @@ class WebSocketGameClient():
                         self.lose_counter += 1
                         print("LOSE")
                         self._game_ended_reset()
-            time.sleep(self.tick_time)
 
     def check_my_stack(self) -> bool:
         if len(self.my_action_stack) <= self.my_action_ptr:

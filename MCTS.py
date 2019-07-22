@@ -68,7 +68,7 @@ class MCTS():
             Ps, v = self.nnet.predict(matrices)
             self.data.lock.release()
             Ps = Ps * valids
-            self._mcts_probs = Ps
+            self._mcts_probs = Ps / np.sum(Ps)
             self._mcts_finished = [True] * self.AVAILABLE_CORES
             return self._mcts_probs
         if not any(self._mcts_finished):
@@ -77,7 +77,13 @@ class MCTS():
         s = self.game.stringRepresentation(self._mcts_eval_state)
         counts = [self.data.Nsa[(s, a)] if (s, a) in self.data.Nsa else 0 for a in range(self.game.getActionSize())]
         if float(sum(counts)) == 0:
-            counts = self.data.Ps[s]
+            try:
+                counts = self.data.Ps[s]
+            except:
+                valids = self.game.getValidMoves(self._mcts_eval_state, 1)
+                Ps, _ = self.nnet.predict(self._mcts_eval_state.matrice_stack)
+                Ps = Ps * valids
+                counts = Ps / np.sum(Ps)
         if temp == 0:
             bestA = np.argmax(counts)
             probs = [0] * len(counts)
@@ -129,8 +135,8 @@ class MCTS():
 
         # Overtime for ong games
         ret_time = my_time-canonicalBoard.time_remaining[int(not team), board]
-        if ret_time < 0.25:
-            return 0.25
+        if ret_time < self.args.tick_time:
+            return self.args.tick_time
         return ret_time
 
 
@@ -154,6 +160,7 @@ class MCTS():
             game_copy.setState(canonicalBoard)
             search_mcts(canonicalBoard, self.data, game_copy, self.nnet)
             counter += 1
+        # print("MCTS >> Simulations :", counter)
         self.lock.acquire()
         self._mcts_finished[thread_id] = True
         self.lock.release()
