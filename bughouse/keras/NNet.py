@@ -24,7 +24,7 @@ args = dotdict({
 
 
 class NNetWrapper(NeuralNet):
-    def __init__(self, game, modelweights_path='finalModel/model-05.hdf5', b_randomNet=False):
+    def __init__(self, game, modelweights_path='finalModel/FinalModel.hdf5', b_randomNet=False):
         if b_randomNet:
             self.nnet = randomNet(args)
         else:

@@ -30,7 +30,7 @@ def acc_round_unequal(y_true,y_pred):
 graph = None
 
 class BugHouseNet():
-    def __init__(self, args, modelweights_path='finalModel/FinalModelNewData.h5'):
+    def __init__(self, args, modelweights_path='finalModel/FinalModel.hdf5'):
 
         self.CLASSES_LEN = NB_LABELS
         self.channel_pos = 'channels_last'
