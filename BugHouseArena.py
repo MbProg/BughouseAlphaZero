@@ -101,7 +101,8 @@ class BugHouseArena(Arena):
                         print(self.mcts._mcts_eval_state._fen[0], self.mcts._mcts_eval_state._fen[1])
                         assert valids[action] > 0
                     my_time_remaining[0] = max_time - (time.time() - start_time) - delay + (max_time - my_time_remaining[1])
-                    state, curPlayer = self.game.getNextState(action, time=my_time_remaining[0], build_matrices=False)
+                    if wsgc.game_started == True and wsgc.player_ready:
+                        state, curPlayer = self.game.getNextState(action, time=my_time_remaining[0], build_matrices=False)
                     print(time.time(), "STOP MCTS >>", state._fen[0], state._fen[1])
                     wsgc.send_action(self.game.getActionString(action))
                     half_turn += 1
@@ -122,7 +123,8 @@ class BugHouseArena(Arena):
                                     max_time - my_time_remaining[0])
                         # play the action on our simulated game
                         action = self.game.getActionNumber(wsgc.pop_my_stack())
-                        state, curPlayer = self.game.getNextState(action, time=my_time_remaining[1],
+                        if wsgc.game_started == True and wsgc.player_ready:
+                            state, curPlayer = self.game.getNextState(action, time=my_time_remaining[1],
                                                                   build_matrices=False, player_view=True)
                         half_turn += 1
 
@@ -137,7 +139,8 @@ class BugHouseArena(Arena):
                                                                             int(not other_board_toggle)])
                         # play the action on our simulated game
                         action = self.game.getActionNumber(actionString)
-                        state, curPlayer = self.game.getNextState(action,time=other_time_remaining[int(other_board_toggle)],
+                        if wsgc.game_started == True and wsgc.player_ready:
+                            state, curPlayer = self.game.getNextState(action,time=other_time_remaining[int(other_board_toggle)],
                                                                   play_other_board=True, build_matrices=False,
                                                                   player_view=False)
                         # toggle the other board so we know a turn has been played
