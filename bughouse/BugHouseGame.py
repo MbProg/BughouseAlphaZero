@@ -69,12 +69,15 @@ class BugHouseGame(Game):
         finished = self.environment.game_finished(self.environment.board)
         if finished:
             score = self.environment.get_score(self.environment.board)
+            color = int(self.environment.boards.boards[self.environment.board].turn)
+            if color == 0:
+                color = -1
             if score == 0:
                 # draw has very little value.
                 return 1e-4
-            elif score == player:
+            elif score == color:
                 return +1
-            elif score == -player:
+            elif score == -color:
                 return -1
             else:
                 raise ValueError('Unexpected winstate found: ', winstate)

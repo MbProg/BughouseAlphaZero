@@ -400,8 +400,7 @@ class BughouseBoards:
             return np.asarray([0, 0, 0])
         else:
             if self.is_checkmate(board):
-                return 1 if self.boards[board].turn == chess.WHITE \
-                    else -1
+                return -1 if self.boards[board].turn == chess.WHITE else 1
             # Check for a draw
             if (self.is_threefold_repetition(board) or self.fifty_moves_rule(board) or  self.possible_stalemate(board)):
                 return 0

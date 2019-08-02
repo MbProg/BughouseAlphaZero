@@ -9,13 +9,17 @@ from bughouse.BugHouseGame import display as display
 args = dotdict({
     'tick_time' : 0.05,
     'url' : "ws://127.0.0.1/websocketclient",
-    'fix_action_input': True,
+    'fix_action_input': False,
     'cpuct': 1,
     'mctsTmp' : 0.5,
     'mctsTmpDepth' : 4,
-    'mctsValueInit' : -0.1,
+    'mctsValueInit' : -0.3,
+    'mctsOpeningTime': 1.0,
+    'mctsMidgameDepth': 30,
+    'mctsTimeBuffer': 30,
     'restart_cutoff' : 0.75,
     'network_only' : True,
+    'random_play' : True,
 
 
     'numIters': 1,
@@ -39,7 +43,7 @@ if __name__=="__main__":
     if len(sys.argv) > 1:
         args.url = sys.argv[1]
     g = Game()
-    nnet = nn(g, b_randomNet=False)
+    nnet = nn(g,modelweights_path='finalModel/FinalModelJustForAlex.hdf5', b_randomNet=args.random_play)
     b = BugHouseArena(g, nnet, args, display)
-    b.playAgainstServer(random=False)
+    b.playAgainstServer(random=args.random_play)
 

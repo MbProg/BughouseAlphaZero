@@ -127,11 +127,12 @@ class MCTS():
         else:
             my_time = canonicalBoard.time_remaining[team, board]
         # Opening
-        if f_moves <= 4:
+        if f_moves <= self.args.mctsTmpDepth:
             return 1
         # Midgame to the predicted end
-        if f_moves <= 30:
-            return (MAX_TIME-44)/26.0
+        opening_time = self.args.mctsOpeningTime*self.args.mctsTmpDepth
+        if f_moves <= self.args.mctsMidgameDepth and (my_time > self.args.mctsTimeBuffer):
+            return (MAX_TIME-(opening_time + self.args.mctsTimeBuffer))/float(self.args.mctsMidgameDepth-self.args.mctsTmpDepth)
 
         # Overtime for ong games
         ret_time = my_time-canonicalBoard.time_remaining[int(not team), board]
@@ -160,7 +161,7 @@ class MCTS():
             game_copy.setState(canonicalBoard)
             search_mcts(canonicalBoard, self.data, game_copy, self.nnet)
             counter += 1
-        # print("MCTS >> Simulations :", counter)
+        print("MCTS >> Simulations :", counter)
         self.lock.acquire()
         self._mcts_finished[thread_id] = True
         self.lock.release()
@@ -188,12 +189,12 @@ def search_mcts(canonicalBoard, data: MCTSData, game, nnet, player=1):
     s = game.stringRepresentation(canonicalBoard)
     if s not in data.Es:
         data.lock.acquire()
-        data.Es[s] = game.getGameEnded(canonicalBoard, 1)
+        data.Es[s] = game.getGameEnded(canonicalBoard, player)
         data.lock.release()
     if data.Es[s]!=0:
         # terminal node
         # ToDo check if returns are correct
-        return (player*data.Es[s])
+        return -data.Es[s]
 
     # Expand a Node
     if s not in data.Ps:
@@ -232,7 +233,7 @@ def search_mcts(canonicalBoard, data: MCTSData, game, nnet, player=1):
             if (s,a) in data.Qsa:
                 u = data.Qsa[(s,a)] + data.args.cpuct*data.Ps[s][a]*math.sqrt(data.Ns[s])/(1+data.Nsa[(s,a)])
             else:
-                u = data.args.mctsValueInit + data.args.cpuct*data.Ps[s][a]*math.sqrt(data.Ns[s] + EPS)     # Q = 0 ?
+                u = player*data.args.mctsValueInit + data.args.cpuct*data.Ps[s][a]*math.sqrt(data.Ns[s] + EPS)     # Q = 0 ?
 
             if u > cur_best:
                 cur_best = u
@@ -249,12 +250,12 @@ def search_mcts(canonicalBoard, data: MCTSData, game, nnet, player=1):
         data.Nsa[(s,a)] += 1
 
     else:
-        data.Qsa[(s,a)] = player*v
+        data.Qsa[(s,a)] = v
         data.Nsa[(s,a)] = 1
 
     data.Ns[s] += 1
     data.lock.release()
-    return (player*v)
+    return -v
 
 def prune_mcts_data(data: MCTSData, max_depth = 4):
     key_s = []
